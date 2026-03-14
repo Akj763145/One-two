@@ -1,0 +1,5 @@
+{
+  "name": "Movie Wallah",
+  "description": "A movie sharing website with an admin panel to add, edit, and delete movie links.",
+  "requestFramePermissions": []
+}
