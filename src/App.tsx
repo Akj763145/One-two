@@ -316,7 +316,7 @@ export default function App() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
           </div>
         ) : filteredMovies.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
             {filteredMovies.map(movie => (
               <div 
                 key={movie.id} 
@@ -331,34 +331,34 @@ export default function App() {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
-                    <span className="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full font-medium flex items-center gap-2">
-                      <Film size={18} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                    <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 text-sm rounded-full font-medium flex items-center gap-1.5">
+                      <Film size={16} />
                       Watch Now
                     </span>
                   </div>
                 </a>
                 
-                <div className="p-5 flex-1 flex flex-col">
-                  <h3 className="text-xl font-bold mb-2 line-clamp-1">{movie.title}</h3>
-                  <p className={`text-sm flex-1 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className="p-4 flex-1 flex flex-col">
+                  <h3 className="text-lg font-bold mb-1 line-clamp-1">{movie.title}</h3>
+                  <p className={`text-xs flex-1 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
                   
                   {isAdmin && (
-                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                       <button 
                         onClick={(e) => { e.preventDefault(); handleEdit(movie); }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
                       >
-                        <Edit size={16} />
+                        <Edit size={14} />
                         Edit
                       </button>
                       <button 
                         onClick={(e) => { e.preventDefault(); handleDelete(movie.id); }}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                         Delete
                       </button>
                     </div>
