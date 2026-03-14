@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 // Types
 interface Movie {
@@ -24,6 +25,7 @@ const INITIAL_MOVIES: Movie[] = [
 export default function App() {
   // State
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +37,8 @@ export default function App() {
   
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -44,14 +48,9 @@ export default function App() {
     description: ''
   });
 
-  // Load from local storage
+  // Load from Supabase or Local Storage
   useEffect(() => {
-    const savedMovies = localStorage.getItem('movieWallah_movies');
-    if (savedMovies) {
-      setMovies(JSON.parse(savedMovies));
-    } else {
-      setMovies(INITIAL_MOVIES);
-    }
+    fetchMovies();
     
     // Check system preference for dark mode initially
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -59,10 +58,37 @@ export default function App() {
     }
   }, []);
 
-  // Save to local storage when movies change
+  // Save to local storage when movies change (fallback mode)
   useEffect(() => {
-    localStorage.setItem('movieWallah_movies', JSON.stringify(movies));
+    if (!supabase) {
+      localStorage.setItem('movieWallah_movies', JSON.stringify(movies));
+    }
   }, [movies]);
+
+  const fetchMovies = async () => {
+    if (!supabase) {
+      const savedMovies = localStorage.getItem('movieWallah_movies');
+      if (savedMovies) {
+        setMovies(JSON.parse(savedMovies));
+      } else {
+        setMovies(INITIAL_MOVIES);
+      }
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('movies')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching movies:', error);
+    } else if (data) {
+      setMovies(data);
+    }
+    setIsLoading(false);
+  };
 
   // Apply dark mode class to body
   useEffect(() => {
@@ -76,13 +102,14 @@ export default function App() {
   // Handlers
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (adminPassword === '00000000') {
       setIsAdmin(true);
       setShowAdminLogin(false);
       setAdminPassword('');
       setShowMenu(false);
     } else {
-      alert('Incorrect password');
+      setErrorMsg('Incorrect password');
     }
   };
 
@@ -91,13 +118,57 @@ export default function App() {
     setShowMenu(false);
   };
 
-  const handleSaveMovie = (e: React.FormEvent) => {
+  const handleSaveMovie = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingMovie) {
-      setMovies(movies.map(m => m.id === editingMovie.id ? { ...formData, id: m.id } : m));
+    setErrorMsg(null);
+    
+    const movieData = {
+      title: formData.title,
+      url: formData.url,
+      posterUrl: formData.posterUrl,
+      description: formData.description
+    };
+
+    if (!supabase) {
+      // Fallback to local state
+      if (editingMovie) {
+        setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+      } else {
+        setMovies([{ ...movieData, id: Date.now().toString() }, ...movies]);
+      }
     } else {
-      setMovies([{ ...formData, id: Date.now().toString() }, ...movies]);
+      // Supabase logic
+      if (editingMovie) {
+        const { error } = await supabase
+          .from('movies')
+          .update(movieData)
+          .eq('id', editingMovie.id);
+          
+        if (error) {
+          setErrorMsg('Error updating movie: ' + error.message + '. Did you create the movies table in Supabase?');
+          return;
+        }
+        setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+      } else {
+        const { data, error } = await supabase
+          .from('movies')
+          .insert([movieData])
+          .select();
+          
+        if (error) {
+          setErrorMsg('Error adding movie: ' + error.message + '. Did you create the movies table in Supabase?');
+          return;
+        }
+        if (data && data.length > 0) {
+          setMovies([...data, ...movies]);
+        } else {
+          // Fallback if RLS prevents returning the inserted row
+          setMovies([{ ...movieData, id: Date.now().toString() }, ...movies]);
+          fetchMovies(); // Re-fetch to sync
+        }
+      }
     }
+    
     setShowAddEditModal(false);
     setFormData({ title: '', url: '', posterUrl: '', description: '' });
     setEditingMovie(null);
@@ -114,13 +185,35 @@ export default function App() {
     setShowAddEditModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this movie?')) {
-      setMovies(movies.filter(m => m.id !== id));
+  const handleDelete = async (id: string) => {
+    setMovieToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!movieToDelete) return;
+    
+    if (!supabase) {
+      setMovies(movies.filter(m => m.id !== movieToDelete));
+      setMovieToDelete(null);
+      return;
     }
+    
+    const { error } = await supabase
+      .from('movies')
+      .delete()
+      .eq('id', movieToDelete);
+      
+    if (error) {
+      console.error('Error deleting movie:', error);
+      // We'll just log it and still remove from UI for now to prevent getting stuck
+    }
+    
+    setMovies(movies.filter(m => m.id !== movieToDelete));
+    setMovieToDelete(null);
   };
 
   const openAddModal = () => {
+    setErrorMsg(null);
     setEditingMovie(null);
     setFormData({ title: '', url: '', posterUrl: '', description: '' });
     setShowAddEditModal(true);
@@ -182,6 +275,13 @@ export default function App() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {!supabase && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-r-xl">
+            <p className="font-bold">Supabase not configured</p>
+            <p>Please add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to your environment variables to enable database features.</p>
+          </div>
+        )}
+        
         {/* Search and Admin Actions */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 items-center justify-between">
           <div className={`relative flex-1 max-w-2xl w-full rounded-xl overflow-hidden border ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-300'}`}>
@@ -211,7 +311,11 @@ export default function App() {
         <h2 className="text-3xl font-bold mb-6">Movies</h2>
 
         {/* Movies Grid */}
-        {filteredMovies.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+          </div>
+        ) : filteredMovies.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredMovies.map(movie => (
               <div 
@@ -284,7 +388,10 @@ export default function App() {
                 Admin Access
               </div>
               <button 
-                onClick={() => setShowAdminLogin(false)}
+                onClick={() => {
+                  setShowAdminLogin(false);
+                  setErrorMsg(null);
+                }}
                 className={`p-1 rounded-full transition-colors ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
               >
                 <X size={20} />
@@ -304,6 +411,9 @@ export default function App() {
                   className={`w-full px-4 py-3 rounded-xl border outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 ${isDarkMode ? 'bg-[#0a0a0a] border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   autoFocus
                 />
+                {errorMsg && (
+                  <p className="text-red-500 text-sm mt-2">{errorMsg}</p>
+                )}
               </div>
               
               <button 
@@ -327,7 +437,10 @@ export default function App() {
                 {editingMovie ? 'Edit Movie' : 'Add New Movie'}
               </div>
               <button 
-                onClick={() => setShowAddEditModal(false)}
+                onClick={() => {
+                  setShowAddEditModal(false);
+                  setErrorMsg(null);
+                }}
                 className={`p-1 rounded-full transition-colors ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
               >
                 <X size={20} />
@@ -409,6 +522,12 @@ export default function App() {
                 </div>
               </div>
               
+              {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl text-sm">
+                  {errorMsg}
+                </div>
+              )}
+              
               <button 
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-colors mt-2"
@@ -417,6 +536,32 @@ export default function App() {
                 {editingMovie ? 'Save Changes' : 'Add to Library'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {movieToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border p-6 ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-200'}`}>
+            <h3 className="text-xl font-bold mb-2">Delete Movie</h3>
+            <p className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Are you sure you want to delete this movie? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setMovieToDelete(null)}
+                className={`flex-1 py-3 rounded-xl font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 py-3 rounded-xl font-medium bg-red-600 hover:bg-red-700 text-white transition-colors"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
