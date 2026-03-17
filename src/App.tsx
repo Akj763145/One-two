@@ -340,7 +340,7 @@ export default function App() {
                 </a>
                 
                 <div className="p-4 flex-1 flex flex-col">
-                  <h3 className="text-lg font-bold mb-1 line-clamp-1">{movie.title}</h3>
+                  <h3 className="text-lg font-bold mb-1">{movie.title}</h3>
                   <p className={`text-xs flex-1 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
