@@ -105,7 +105,7 @@ export default function App() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (adminPassword === '00000000') {
+    if (adminPassword === '7673085672') {
       setIsAdmin(true);
       setShowAdminLogin(false);
       setAdminPassword('');
@@ -246,10 +246,20 @@ export default function App() {
       {/* Navbar */}
       <nav className={`sticky top-0 z-10 px-4 py-3 flex items-center justify-between border-b ${isDarkMode ? 'bg-[#141414] border-gray-800' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border ${isDarkMode ? 'bg-black border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
-            <span className="text-sm leading-none text-center">M<br/>W</span>
+          <div className="relative w-12 h-12 rounded-full border-2 border-white flex items-center justify-center bg-[#111] overflow-hidden">
+            <div className="absolute inset-1 rounded-full border-2 border-red-500"></div>
+            <div className="text-white font-serif text-sm leading-[0.9] text-center z-10 flex flex-col items-center justify-center">
+              <span>M</span>
+              <span>W</span>
+            </div>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Movie Wallah</h1>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-xl font-bold tracking-wider uppercase flex gap-1.5 leading-none mb-1">
+              <span className="text-red-500">MOVIE</span>
+              <span className={isDarkMode ? 'text-white' : 'text-black'}>WALLAH</span>
+            </h1>
+            <span className="text-[9px] tracking-[0.25em] text-gray-500 uppercase font-bold leading-none">Download Any Movie</span>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">
