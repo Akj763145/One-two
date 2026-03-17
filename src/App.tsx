@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film } from 'lucide-react';
+import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 // Types
@@ -322,7 +322,7 @@ export default function App() {
                 key={movie.id} 
                 className={`group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-xl flex flex-col ${isDarkMode ? 'bg-[#141414] border-gray-800 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
               >
-                <a href={movie.url} target="_blank" rel="noopener noreferrer" className="block relative aspect-[2/3] overflow-hidden">
+                <div className="block relative aspect-[2/3] overflow-hidden">
                   <img 
                     src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
                     alt={movie.title}
@@ -331,19 +331,23 @@ export default function App() {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                    <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 text-sm rounded-full font-medium flex items-center gap-1.5">
-                      <Film size={16} />
-                      Watch Now
-                    </span>
-                  </div>
-                </a>
+                </div>
                 
                 <div className="p-4 flex-1 flex flex-col">
                   <h3 className="text-lg font-bold mb-1">{movie.title}</h3>
-                  <p className={`text-xs flex-1 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className={`text-xs flex-1 line-clamp-2 mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
+                  
+                  <a 
+                    href={movie.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Download size={16} />
+                    Download
+                  </a>
                   
                   {isAdmin && (
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
