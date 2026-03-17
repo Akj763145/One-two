@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download } from 'lucide-react';
+import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download, Star } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 // Types
@@ -10,6 +10,7 @@ interface Movie {
   posterUrl: string;
   description: string;
   created_at?: string;
+  rating?: number;
 }
 
 // Initial dummy data if local storage is empty
@@ -213,6 +214,24 @@ export default function App() {
     setMovieToDelete(null);
   };
 
+  const handleRatingChange = async (movieId: string, newRating: number) => {
+    if (!isAdmin) return;
+
+    // Optimistic update
+    setMovies(movies.map(m => m.id === movieId ? { ...m, rating: newRating } : m));
+
+    if (supabase) {
+      const { error } = await supabase
+        .from('movies')
+        .update({ rating: newRating })
+        .eq('id', movieId);
+        
+      if (error) {
+        console.error('Error updating rating:', error);
+      }
+    }
+  };
+
   const openAddModal = () => {
     setErrorMsg(null);
     setEditingMovie(null);
@@ -336,6 +355,25 @@ export default function App() {
                 
                 <div className="p-3 flex-1 flex flex-col">
                   <h3 className="text-sm font-bold mb-1 leading-tight">{movie.title}</h3>
+                  <div className="flex items-center gap-0.5 mb-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        size={12}
+                        className={`transition-colors ${
+                          isAdmin ? 'cursor-pointer hover:scale-110' : ''
+                        } ${
+                          (movie.rating || 0) >= star
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : isDarkMode ? 'text-gray-600' : 'text-gray-300'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (isAdmin) handleRatingChange(movie.id, star);
+                        }}
+                      />
+                    ))}
+                  </div>
                   <p className={`text-[10px] flex-1 line-clamp-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
