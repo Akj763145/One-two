@@ -343,10 +343,12 @@ export default function App() {
                     href={movie.url} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="flex items-center justify-center gap-2 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
                   >
-                    <Download size={16} />
-                    Download
+                    <span className="flex items-center gap-2 mix-blend-difference text-white">
+                      <Download size={16} />
+                      Download
+                    </span>
                   </a>
                   
                   {isAdmin && (
