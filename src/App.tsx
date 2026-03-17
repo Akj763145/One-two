@@ -9,6 +9,7 @@ interface Movie {
   url: string;
   posterUrl: string;
   description: string;
+  created_at?: string;
 }
 
 // Initial dummy data if local storage is empty
@@ -29,6 +30,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('latest');
   
   // Modals state
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -219,7 +221,20 @@ export default function App() {
     setShowAddEditModal(true);
   };
 
-  const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredMovies = movies
+    .filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (sortBy === 'a-z') return a.title.localeCompare(b.title);
+      if (sortBy === 'z-a') return b.title.localeCompare(a.title);
+      
+      // For 'latest' and 'oldest', we need to check created_at or fallback to id
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : parseInt(a.id) || 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : parseInt(b.id) || 0;
+      
+      if (sortBy === 'oldest') return dateA - dateB;
+      // Default is 'latest'
+      return dateB - dateA;
+    });
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -282,19 +297,37 @@ export default function App() {
           </div>
         )}
         
-        {/* Search and Admin Actions */}
+        {/* Search, Sort and Admin Actions */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 items-center justify-between">
-          <div className={`relative flex-1 max-w-2xl w-full rounded-xl overflow-hidden border ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-300'}`}>
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+          <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full max-w-3xl">
+            <div className={`relative flex-1 rounded-xl overflow-hidden border ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-300'}`}>
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search all movies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full pl-11 pr-4 py-3 outline-none bg-transparent ${isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search all movies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-11 pr-4 py-3 outline-none bg-transparent ${isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
-            />
+            
+            <div className={`relative rounded-xl overflow-hidden border flex-shrink-0 sm:w-48 ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-white border-gray-300'}`}>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={`w-full h-full px-4 py-3 outline-none bg-transparent appearance-none cursor-pointer pr-10 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+              >
+                <option value="latest" className={isDarkMode ? 'bg-[#1c1c1e]' : 'bg-white'}>Latest Added</option>
+                <option value="oldest" className={isDarkMode ? 'bg-[#1c1c1e]' : 'bg-white'}>Oldest Added</option>
+                <option value="a-z" className={isDarkMode ? 'bg-[#1c1c1e]' : 'bg-white'}>Title (A-Z)</option>
+                <option value="z-a" className={isDarkMode ? 'bg-[#1c1c1e]' : 'bg-white'}>Title (Z-A)</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg className={`w-4 h-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
           </div>
           
           {isAdmin && (
