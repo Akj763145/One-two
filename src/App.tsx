@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download, Star } from 'lucide-react';
+import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download, Play } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 // Types
@@ -7,10 +7,10 @@ interface Movie {
   id: string;
   title: string;
   url: string;
+  viewUrl?: string;
   posterUrl: string;
   description: string;
   created_at?: string;
-  rating?: number;
 }
 
 // Initial dummy data if local storage is empty
@@ -19,6 +19,7 @@ const INITIAL_MOVIES: Movie[] = [
     id: '1',
     title: 'The raja Saab',
     url: '#',
+    viewUrl: '#',
     posterUrl: 'https://picsum.photos/seed/raja/600/900',
     description: 'Download now'
   }
@@ -46,6 +47,7 @@ export default function App() {
   const [formData, setFormData] = useState({
     title: '',
     url: '',
+    viewUrl: '',
     posterUrl: '',
     description: ''
   });
@@ -127,6 +129,7 @@ export default function App() {
     const movieData = {
       title: formData.title,
       url: formData.url,
+      viewUrl: formData.viewUrl,
       posterUrl: formData.posterUrl,
       description: formData.description
     };
@@ -181,6 +184,7 @@ export default function App() {
     setFormData({
       title: movie.title,
       url: movie.url,
+      viewUrl: movie.viewUrl || '',
       posterUrl: movie.posterUrl,
       description: movie.description
     });
@@ -214,28 +218,10 @@ export default function App() {
     setMovieToDelete(null);
   };
 
-  const handleRatingChange = async (movieId: string, newRating: number) => {
-    if (!isAdmin) return;
-
-    // Optimistic update
-    setMovies(movies.map(m => m.id === movieId ? { ...m, rating: newRating } : m));
-
-    if (supabase) {
-      const { error } = await supabase
-        .from('movies')
-        .update({ rating: newRating })
-        .eq('id', movieId);
-        
-      if (error) {
-        console.error('Error updating rating:', error);
-      }
-    }
-  };
-
   const openAddModal = () => {
     setErrorMsg(null);
     setEditingMovie(null);
-    setFormData({ title: '', url: '', posterUrl: '', description: '' });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' });
     setShowAddEditModal(true);
   };
 
@@ -365,40 +351,36 @@ export default function App() {
                 
                 <div className="p-3 flex-1 flex flex-col">
                   <h3 className="text-sm font-bold mb-1 leading-tight">{movie.title}</h3>
-                  <div className="flex items-center gap-0.5 mb-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={12}
-                        className={`transition-colors ${
-                          isAdmin ? 'cursor-pointer hover:scale-110' : ''
-                        } ${
-                          (movie.rating || 0) >= star
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : isDarkMode ? 'text-gray-600' : 'text-gray-300'
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (isAdmin) handleRatingChange(movie.id, star);
-                        }}
-                      />
-                    ))}
-                  </div>
                   <p className={`text-[10px] flex-1 line-clamp-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
                   
-                  <a 
-                    href={movie.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="relative flex items-center justify-center w-full py-1.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
-                  >
-                    <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                      <Download size={14} />
-                      Download
-                    </span>
-                  </a>
+                  <div className="flex flex-col gap-2 mt-auto">
+                    {movie.viewUrl && (
+                      <a 
+                        href={movie.viewUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="relative flex items-center justify-center w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-white"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Play size={14} className="fill-current" />
+                          View
+                        </span>
+                      </a>
+                    )}
+                    <a 
+                      href={movie.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="relative flex items-center justify-center w-full py-1.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                    >
+                      <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                        <Download size={14} />
+                        Download
+                      </span>
+                    </a>
+                  </div>
                   
                   {isAdmin && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
@@ -529,7 +511,7 @@ export default function App() {
               
               <div>
                 <label className={`block text-xs font-bold tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  WATCH URL
+                  DOWNLOAD URL
                 </label>
                 <div className={`flex items-center rounded-xl border overflow-hidden focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors ${isDarkMode ? 'bg-[#0a0a0a] border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
                   <div className="pl-4 pr-2 text-gray-500">
@@ -541,6 +523,24 @@ export default function App() {
                     placeholder="https://..."
                     value={formData.url}
                     onChange={(e) => setFormData({...formData, url: e.target.value})}
+                    className={`w-full py-3 pr-4 outline-none bg-transparent ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-xs font-bold tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  VIEW URL (Optional)
+                </label>
+                <div className={`flex items-center rounded-xl border overflow-hidden focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors ${isDarkMode ? 'bg-[#0a0a0a] border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
+                  <div className="pl-4 pr-2 text-gray-500">
+                    <Play size={18} />
+                  </div>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={formData.viewUrl}
+                    onChange={(e) => setFormData({...formData, viewUrl: e.target.value})}
                     className={`w-full py-3 pr-4 outline-none bg-transparent ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                   />
                 </div>
