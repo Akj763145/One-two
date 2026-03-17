@@ -222,7 +222,7 @@ export default function App() {
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Navbar */}
       <nav className={`sticky top-0 z-10 px-4 py-3 flex items-center justify-between border-b ${isDarkMode ? 'bg-[#141414] border-gray-800' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center gap-3">
@@ -274,7 +274,7 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6">
         {!supabase && (
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-r-xl">
             <p className="font-bold">Supabase not configured</p>
@@ -322,7 +322,7 @@ export default function App() {
                 key={movie.id} 
                 className={`group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-xl flex flex-col ${isDarkMode ? 'bg-[#141414] border-gray-800 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
               >
-                <div className="block relative aspect-[2/3] overflow-hidden">
+                <div className="block relative aspect-[3/4] overflow-hidden">
                   <img 
                     src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
                     alt={movie.title}
@@ -333,9 +333,9 @@ export default function App() {
                   />
                 </div>
                 
-                <div className="p-4 flex-1 flex flex-col">
-                  <h3 className="text-lg font-bold mb-1">{movie.title}</h3>
-                  <p className={`text-xs flex-1 line-clamp-2 mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <div className="p-3 flex-1 flex flex-col">
+                  <h3 className="text-sm font-bold mb-1 leading-tight">{movie.title}</h3>
+                  <p className={`text-[10px] flex-1 line-clamp-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {movie.description}
                   </p>
                   
@@ -343,16 +343,16 @@ export default function App() {
                     href={movie.url} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                    className="relative flex items-center justify-center w-full py-1.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
                   >
-                    <span className="flex items-center gap-2 mix-blend-difference text-white">
-                      <Download size={16} />
+                    <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                      <Download size={14} />
                       Download
                     </span>
                   </a>
                   
                   {isAdmin && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
                       <button 
                         onClick={(e) => { e.preventDefault(); handleEdit(movie); }}
                         className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
@@ -383,6 +383,11 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <footer className={`py-6 text-center border-t mt-auto ${isDarkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+        <p className="text-sm font-medium">Proudly made by Bihar</p>
+        <p className="text-xs mt-1">(Ayush and Ayush)</p>
+      </footer>
 
       {/* Admin Login Modal */}
       {showAdminLogin && (
