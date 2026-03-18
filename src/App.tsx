@@ -479,16 +479,19 @@ export default function App() {
                     className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-2xl' : 'bg-white border-gray-200 shadow-xl'}`}
                   >
                     <div className="block relative aspect-[16/9] overflow-hidden bg-black/20">
-                      {/* Blurred Backdrop for "Full" effect */}
+                      {/* Blurred Backdrop for "Full" effect - Optimized for mobile */}
                       <img 
                         src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
                         alt=""
-                        className="absolute inset-0 w-full h-full object-cover blur-xl opacity-50 scale-110"
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover blur-xl opacity-50 scale-110 transform-gpu will-change-transform"
                       />
                       <div className="relative w-full h-full flex items-center justify-center">
                         <img 
                           src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
                           alt={movie.title}
+                          loading="lazy"
                           data-swiper-parallax="-20%"
                           className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105 z-10"
                           onError={(e) => {
@@ -608,7 +611,7 @@ export default function App() {
                     >
                       <TiltCard
                         isDarkMode={isDarkMode}
-                        className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform transform-gpu ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-lg' : 'bg-white border-gray-200 shadow-sm'}`}
+                        className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-lg' : 'bg-white border-gray-200 shadow-sm'}`}
                       >
                         <div className="relative aspect-[2/3] overflow-hidden">
                           <SmoothImage 
@@ -617,7 +620,7 @@ export default function App() {
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         </div>
-                        <div className="p-4 flex-1 flex flex-col" style={{ transform: "translateZ(20px)" }}>
+                        <div className="p-4 flex-1 flex flex-col">
                           <div className="flex justify-between items-start mb-2">
                             <h3 className={`font-bold text-lg leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                               {movie.title}
