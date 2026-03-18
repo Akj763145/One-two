@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as LinkIcon, Image as ImageIcon, FileText, Film, Download, Play, Star } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { EffectCreative, Mousewheel, Parallax } from 'swiper/modules';
+import { motion } from 'framer-motion';
+import 'swiper/css';
+import 'swiper/css/effect-creative';
 
 // Types
 interface Movie {
@@ -354,96 +359,143 @@ export default function App() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
           </div>
         ) : filteredMovies.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-            {filteredMovies.map(movie => (
-              <div 
-                key={movie.id} 
-                className={`group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl flex flex-col ${isDarkMode ? 'bg-[#141414] border-gray-800 hover:border-gray-600 hover:shadow-white/5' : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-indigo-500/10'}`}
-              >
-                <div className="block relative aspect-[3/4] overflow-hidden">
-                  <img 
-                    src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
-                    alt={movie.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
+          <div className="w-full py-10 overflow-hidden">
+            <Swiper
+              effect={'creative'}
+              grabCursor={true}
+              centeredSlides={true}
+              slidesPerView={'auto'}
+              mousewheel={{
+                sensitivity: 1,
+                forceToAxis: true,
+              }}
+              speed={800}
+              parallax={true}
+              creativeEffect={{
+                limitProgress: 3,
+                prev: {
+                  shadow: true,
+                  translate: ['-125%', 0, -400],
+                  rotate: [0, 50, -5],
+                  scale: 0.8,
+                },
+                next: {
+                  shadow: true,
+                  translate: ['125%', 0, -400],
+                  rotate: [0, -50, 5],
+                  scale: 0.8,
+                },
+              }}
+              modules={[EffectCreative, Mousewheel, Parallax]}
+              className="w-full !pb-16 !pt-8"
+            >
+              {filteredMovies.map((movie, index) => (
+                <SwiperSlide key={movie.id} className="!w-[220px] sm:!w-[260px] md:!w-[300px]">
+                  <motion.div 
+                    initial={{ scale: 0.6, opacity: 0, y: 100, rotateX: -45 }}
+                    animate={{ scale: 1, opacity: 1, y: 0, rotateX: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 100,
+                      damping: 12,
+                      mass: 1,
+                      delay: index * 0.1,
                     }}
-                  />
-                </div>
-                
-                <div className="p-3 flex-1 flex flex-col">
-                  <h3 className="text-sm font-bold mb-1 leading-tight">{movie.title}</h3>
-                  <div className="flex items-center gap-0.5 mb-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={12}
-                        className={`transition-colors ${
-                          isAdmin ? 'cursor-pointer hover:scale-110' : ''
-                        } ${
-                          (movie.rating || 0) >= star
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : isDarkMode ? 'text-gray-600' : 'text-gray-300'
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (isAdmin) handleRatingChange(movie.id, star);
+                    whileHover={{ 
+                      scale: 1.03, 
+                      y: -10,
+                      transition: { type: "spring", stiffness: 300, damping: 20 }
+                    }}
+                    className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.5)]' : 'bg-white border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'}`}
+                  >
+                    <div className="block relative aspect-[1/1] overflow-hidden">
+                      <img 
+                        src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
+                        alt={movie.title}
+                        data-swiper-parallax="20%"
+                        data-swiper-parallax-scale="1.15"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
                         }}
                       />
-                    ))}
-                  </div>
-                  <p className={`text-[10px] flex-1 line-clamp-2 mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {movie.description}
-                  </p>
-                  
-                  <div className="flex flex-col gap-2 mt-auto">
-                    {movie.viewUrl && (
-                      <a 
-                        href={movie.viewUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="relative flex items-center justify-center w-full py-1.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
-                      >
-                        <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                          <Play size={14} className="fill-current" />
-                          View
-                        </span>
-                      </a>
-                    )}
-                    <a 
-                      href={movie.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="relative flex items-center justify-center w-full py-1.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
-                    >
-                      <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                        <Download size={14} />
-                        Download
-                      </span>
-                    </a>
-                  </div>
-                  
-                  {isAdmin && (
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
-                      <button 
-                        onClick={(e) => { e.preventDefault(); handleEdit(movie); }}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
-                      >
-                        <Edit size={14} />
-                        Edit
-                      </button>
-                      <button 
-                        onClick={(e) => { e.preventDefault(); handleDelete(movie.id); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                    
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="text-base font-bold mb-1 leading-tight">{movie.title}</h3>
+                      <div className="flex items-center gap-0.5 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            size={14}
+                            className={`transition-colors ${
+                              isAdmin ? 'cursor-pointer hover:scale-110' : ''
+                            } ${
+                              (movie.rating || 0) >= star
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : isDarkMode ? 'text-gray-600' : 'text-gray-300'
+                            }`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (isAdmin) handleRatingChange(movie.id, star);
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <p className={`text-xs flex-1 line-clamp-3 mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {movie.description}
+                      </p>
+                      
+                      <div className="flex flex-col gap-2 mt-auto">
+                        {movie.viewUrl && (
+                          <a 
+                            href={movie.viewUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                          >
+                            <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                              <Play size={14} className="fill-current" />
+                              View
+                            </span>
+                          </a>
+                        )}
+                        <a 
+                          href={movie.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                        >
+                          <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                            <Download size={14} />
+                            Download
+                          </span>
+                        </a>
+                      </div>
+                      
+                      {isAdmin && (
+                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleEdit(movie); }}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                          >
+                            <Edit size={12} />
+                            Edit
+                          </button>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleDelete(movie.id); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         ) : (
           <div className={`text-center py-20 rounded-2xl border ${isDarkMode ? 'bg-[#141414] border-gray-800' : 'bg-white border-gray-200'}`}>
