@@ -3,7 +3,7 @@ import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Mousewheel, Parallax } from 'swiper/modules';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll } from 'framer-motion';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 
@@ -30,6 +30,103 @@ const INITIAL_MOVIES: Movie[] = [
     description: 'Download now'
   }
 ];
+
+// Optimized Image Component for Smooth Loading
+const SmoothImage = ({ src, alt, className, parallax }: { src: string, alt: string, className?: string, parallax?: string }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  return (
+    <div className="relative w-full h-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+      <motion.img
+        src={src}
+        alt={alt}
+        data-swiper-parallax={parallax}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isLoaded ? 1 : 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        onLoad={() => setIsLoaded(true)}
+        className={`${className} w-full h-full`}
+      />
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 3D Tilt Card Component
+const TiltCard = ({ children, className, isDarkMode }: { children: React.ReactNode, className: string, isDarkMode: boolean }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
+  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [20, -20]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-20, 20]);
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const xPct = px / width - 0.5;
+    const yPct = py / height - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+    mouseX.set(px);
+    mouseY.set(py);
+  };
+
+  const handlePointerLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <div className="w-full h-full" style={{ perspective: "1200px" }}>
+      <motion.div
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        style={{
+          rotateY,
+          rotateX,
+          transformStyle: "preserve-3d",
+        }}
+        className={`${className} cursor-pointer touch-pan-y relative`}
+      >
+        <div 
+          style={{ 
+            transform: "translateZ(60px)", 
+            transformStyle: "preserve-3d" 
+          }} 
+          className="h-full flex flex-col pointer-events-none"
+        >
+          <div className="pointer-events-auto h-full flex flex-col">
+            {children}
+          </div>
+        </div>
+        
+        {/* Dynamic Shadow */}
+        <motion.div
+          style={{
+            transform: "translateZ(-20px)",
+            boxShadow: useTransform(
+              [mouseXSpring, mouseYSpring],
+              ([xS, yS]) => `${-xS * 30}px ${-yS * 30}px 40px rgba(0,0,0,0.4)`
+            ),
+          }}
+          className="absolute inset-4 rounded-2xl pointer-events-none -z-10"
+        />
+      </motion.div>
+    </div>
+  );
+};
 
 export default function App() {
   // State
@@ -359,7 +456,7 @@ export default function App() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
           </div>
         ) : filteredMovies.length > 0 ? (
-          <div className="w-full py-10 overflow-hidden">
+          <div className="w-full py-16 overflow-visible">
             <Swiper
               effect={'coverflow'}
               grabCursor={true}
@@ -369,63 +466,69 @@ export default function App() {
                 sensitivity: 1,
                 forceToAxis: true,
               }}
-              speed={600}
               parallax={true}
+              speed={800}
               coverflowEffect={{
-                rotate: 0,
+                rotate: 5,
                 stretch: 0,
                 depth: 100,
-                modifier: 1.5,
+                modifier: 2.5,
                 slideShadows: false,
               }}
               modules={[EffectCoverflow, Mousewheel, Parallax]}
               className="w-full !pb-12 !pt-8"
+              onProgress={(swiper, progress) => {
+                const scrollBar = document.getElementById('carousel-progress');
+                if (scrollBar) {
+                  scrollBar.style.width = `${progress * 100}%`;
+                }
+              }}
             >
               {filteredMovies.map((movie, index) => (
-                <SwiperSlide key={movie.id} className="!w-[220px] sm:!w-[260px] md:!w-[300px]">
-                    <motion.div 
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.4,
-                        ease: [0.23, 1, 0.32, 1],
-                        delay: index * 0.03,
-                      }}
-                      whileHover={{ 
-                        y: -10,
-                        transition: { duration: 0.3, ease: "easeOut" }
-                      }}
-                      className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-xl' : 'bg-white border-gray-200 shadow-md'}`}
-                    >
-                    <div className="block relative aspect-[1/1] overflow-hidden">
+                <SwiperSlide key={movie.id} className="!w-[280px] sm:!w-[320px] md:!w-[380px] perspective-1000">
+                  <TiltCard 
+                    isDarkMode={isDarkMode}
+                    className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-2xl' : 'bg-white border-gray-200 shadow-xl'}`}
+                  >
+                    <div className="block relative aspect-[16/9] overflow-hidden bg-black/20">
+                      {/* Blurred Backdrop for "Full" effect */}
                       <img 
                         src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
-                        alt={movie.title}
-                        data-swiper-parallax="20%"
-                        data-swiper-parallax-scale="1.15"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
-                        }}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover blur-xl opacity-50 scale-110"
                       />
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <img 
+                          src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
+                          alt={movie.title}
+                          data-swiper-parallax="-20%"
+                          className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105 z-10"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900';
+                          }}
+                        />
+                      </div>
                     </div>
                     
-                    <div className="p-4 flex-1 flex flex-col">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className={`text-lg font-bold leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <div className="p-6 flex-1 flex flex-col" style={{ transform: "translateZ(30px)" }}>
+                      <div className="flex justify-between items-start mb-2" data-swiper-parallax="-100">
+                        <h3 className={`text-xl font-bold leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           {movie.title}
                         </h3>
                         <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg text-yellow-500 shrink-0">
-                          <Star size={12} className="fill-current" />
-                          <span className="text-xs font-black">{movie.rating || 0}</span>
+                          <Star size={14} className="fill-current" />
+                          <span className="text-sm font-black">{movie.rating || 0}</span>
                         </div>
                       </div>
                       
-                      <p className={`text-xs flex-1 mb-4 line-clamp-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p 
+                        className={`text-sm flex-1 mb-6 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
+                        data-swiper-parallax="-200"
+                      >
                         {movie.description}
                       </p>
 
-                      <div className="flex flex-col gap-2 mt-auto">
+                      <div className="flex flex-col gap-3 mt-auto" data-swiper-parallax="-300">
                         {movie.viewUrl && (
                           <motion.a 
                             whileHover={{ scale: 1.02 }}
@@ -475,10 +578,21 @@ export default function App() {
                         </div>
                       )}
                     </div>
-                  </motion.div>
+                  </TiltCard>
                 </SwiperSlide>
               ))}
             </Swiper>
+
+            {/* Carousel Progress Bar */}
+            <div className="flex justify-center mt-4 mb-8">
+              <div className={`w-48 h-1 rounded-full overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                <div 
+                  id="carousel-progress" 
+                  className="h-full bg-indigo-500 transition-all duration-300 ease-out"
+                  style={{ width: '0%' }}
+                />
+              </div>
+            </div>
 
             {/* Normal Card Scrolling Section */}
             <div className="mt-4 mb-12">
@@ -498,7 +612,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence mode="popLayout" initial={false}>
                   {filteredMovies.map((movie, index) => (
                     <motion.div
                       key={`grid-${movie.id}`}
@@ -506,89 +620,90 @@ export default function App() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-50px" }}
+                      viewport={{ once: true, margin: "100px" }}
                       transition={{ 
                         duration: 0.4,
-                        ease: [0.23, 1, 0.32, 1],
+                        ease: "easeOut",
                         delay: (index % 4) * 0.05 
                       }}
-                      whileHover={{ 
-                        y: -8,
-                        transition: { duration: 0.2, ease: "easeOut" }
-                      }}
-                      className={`group relative rounded-2xl overflow-hidden border flex flex-col will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-lg' : 'bg-white border-gray-200 shadow-sm'}`}
+                      className="perspective-1000 h-full"
                     >
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <img 
-                        src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
-                        alt={movie.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className={`font-bold text-lg leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {movie.title}
-                        </h3>
-                        <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg text-yellow-500 shrink-0">
-                          <Star size={12} className="fill-current" />
-                          <span className="text-xs font-black">{movie.rating || 0}</span>
+                      <TiltCard
+                        isDarkMode={isDarkMode}
+                        className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform transform-gpu ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-lg' : 'bg-white border-gray-200 shadow-sm'}`}
+                      >
+                        <div className="relative aspect-[2/3] overflow-hidden">
+                          <SmoothImage 
+                            src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
+                            alt={movie.title}
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
                         </div>
-                      </div>
-                      <p className={`text-xs line-clamp-3 mb-4 flex-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {movie.description}
-                      </p>
+                        <div className="p-4 flex-1 flex flex-col" style={{ transform: "translateZ(20px)" }}>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className={`font-bold text-lg leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {movie.title}
+                            </h3>
+                            <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg text-yellow-500 shrink-0">
+                              <Star size={12} className="fill-current" />
+                              <span className="text-xs font-black">{movie.rating || 0}</span>
+                            </div>
+                          </div>
+                          <p className={`text-xs line-clamp-3 mb-4 flex-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {movie.description}
+                          </p>
 
-                      <div className="flex flex-col gap-2 mt-auto">
-                        {movie.viewUrl && (
-                          <motion.a 
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            href={movie.viewUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
-                          >
-                            <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                              View Now
-                            </span>
-                          </motion.a>
-                        )}
-                        <motion.a 
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          href={movie.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-black via-gray-600 to-white animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
-                        >
-                          <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                            Download
-                          </span>
-                        </motion.a>
-                      </div>
-                      
-                      {isAdmin && (
-                        <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
-                          <button 
-                            onClick={() => handleEdit(movie)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
-                          >
-                            <Edit size={12} />
-                            EDIT
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(movie.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                            DELETE
-                          </button>
+                          <div className="flex flex-col gap-2 mt-auto">
+                            {movie.viewUrl && (
+                              <motion.a 
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                href={movie.viewUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
+                              >
+                                <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                                  View Now
+                                </span>
+                              </motion.a>
+                            )}
+                            <motion.a 
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              href={movie.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-black via-gray-600 to-white animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
+                            >
+                              <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                                Download
+                              </span>
+                            </motion.a>
+                          </div>
+                          
+                          {isAdmin && (
+                            <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
+                              <button 
+                                onClick={() => handleEdit(movie)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                              >
+                                <Edit size={12} />
+                                EDIT
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(movie.id)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                              >
+                                <Trash2 size={12} />
+                                DELETE
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                      </TiltCard>
+                    </motion.div>
+                  ))}
                 </AnimatePresence>
               </div>
             </div>
