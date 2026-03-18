@@ -71,8 +71,54 @@ const TiltCard = ({ children, className }: { children: React.ReactNode, classNam
   );
 };
 
+// Welcome Animation Component
+const WelcomeAnimation = ({ onComplete }: { onComplete: () => void }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 0 }}
+      transition={{ delay: 2, duration: 0.8, ease: "easeInOut" }}
+      onAnimationComplete={onComplete}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-[#0a0a0a]"
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="flex flex-col items-center"
+      >
+        <div className="relative w-24 h-24 rounded-full border-4 border-white flex items-center justify-center bg-[#111] overflow-hidden mb-6 shadow-2xl">
+          <div className="absolute inset-1 rounded-full border-4 border-red-500"></div>
+          <div className="text-white font-serif text-2xl leading-[0.9] text-center z-10 flex flex-col items-center justify-center">
+            <span>M</span>
+            <span>W</span>
+          </div>
+        </div>
+        <motion.h1 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="text-4xl font-black tracking-tighter uppercase flex gap-2"
+        >
+          <span className="text-red-500">MOVIE</span>
+          <span className="dark:text-white text-black">WALLAH</span>
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.6 }}
+          className="text-gray-500 tracking-[0.3em] uppercase text-xs mt-4 font-bold"
+        >
+          Made by AYUSH
+        </motion.p>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   // State
+  const [showWelcome, setShowWelcome] = useState(true);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -290,7 +336,11 @@ export default function App() {
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <>
+      <AnimatePresence>
+        {showWelcome && <WelcomeAnimation onComplete={() => setShowWelcome(false)} />}
+      </AnimatePresence>
+      <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Navbar */}
       <nav className={`sticky top-0 z-10 px-4 py-3 flex items-center justify-between border-b ${isDarkMode ? 'bg-[#141414] border-gray-800' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center gap-3">
@@ -854,5 +904,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </>
   );
 }
