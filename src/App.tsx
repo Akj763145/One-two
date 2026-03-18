@@ -113,7 +113,7 @@ export default function App() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (adminPassword === '7673085672') {
+    if (adminPassword === 'qqq') {
       setIsAdmin(true);
       setShowAdminLogin(false);
       setAdminPassword('');
@@ -484,7 +484,7 @@ export default function App() {
             <div className="mt-4 mb-12">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-black tracking-tight mb-1">Browse All</h2>
+                  <h2 className="text-2xl font-black tracking-tight mb-1">More to Enjoy</h2>
                   <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Explore our complete collection of movies
                   </p>
