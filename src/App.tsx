@@ -387,7 +387,7 @@ export default function App() {
                 },
               }}
               modules={[EffectCreative, Mousewheel, Parallax]}
-              className="w-full !pb-16 !pt-8"
+              className="w-full !pb-4 !pt-8"
             >
               {filteredMovies.map((movie, index) => (
                 <SwiperSlide key={movie.id} className="!w-[220px] sm:!w-[260px] md:!w-[300px]">
@@ -422,55 +422,49 @@ export default function App() {
                     </div>
                     
                     <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="text-base font-bold mb-1 leading-tight">{movie.title}</h3>
-                      <div className="flex items-center gap-0.5 mb-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            size={14}
-                            className={`transition-colors ${
-                              isAdmin ? 'cursor-pointer hover:scale-110' : ''
-                            } ${
-                              (movie.rating || 0) >= star
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : isDarkMode ? 'text-gray-600' : 'text-gray-300'
-                            }`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (isAdmin) handleRatingChange(movie.id, star);
-                            }}
-                          />
-                        ))}
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className={`text-lg font-bold leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {movie.title}
+                        </h3>
+                        <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg text-yellow-500 shrink-0">
+                          <Star size={12} className="fill-current" />
+                          <span className="text-xs font-black">{movie.rating || 0}</span>
+                        </div>
                       </div>
-                      <p className={`text-xs flex-1 line-clamp-3 mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      
+                      <p className={`text-xs flex-1 mb-4 line-clamp-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {movie.description}
                       </p>
-                      
+
                       <div className="flex flex-col gap-2 mt-auto">
                         {movie.viewUrl && (
-                          <a 
+                          <motion.a 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                             href={movie.viewUrl} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                            className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-xl text-sm font-bold shadow-lg transition-all isolate overflow-hidden"
                           >
-                            <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                              <Play size={14} className="fill-current" />
-                              View
+                            <span className="flex items-center gap-2 mix-blend-difference text-white">
+                              <Play size={16} className="fill-current" />
+                              View Now
                             </span>
-                          </a>
+                          </motion.a>
                         )}
-                        <a 
+                        <motion.a 
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                           href={movie.url} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="relative flex items-center justify-center w-full py-2 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] isolate"
+                          className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-black via-gray-600 to-white animate-gradient rounded-xl text-sm font-bold shadow-lg transition-all isolate overflow-hidden"
                         >
-                          <span className="flex items-center gap-1.5 mix-blend-difference text-white">
-                            <Download size={14} />
+                          <span className="flex items-center gap-2 mix-blend-difference text-white">
+                            <Download size={16} />
                             Download
                           </span>
-                        </a>
+                        </motion.a>
                       </div>
                       
                       {isAdmin && (
@@ -496,6 +490,108 @@ export default function App() {
                 </SwiperSlide>
               ))}
             </Swiper>
+
+            {/* Normal Card Scrolling Section */}
+            <div className="mt-4 mb-12">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight mb-1">Browse All</h2>
+                  <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Explore our complete collection of movies
+                  </p>
+                </div>
+                <div className={`h-px flex-1 mx-8 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                    {filteredMovies.length} ITEMS
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredMovies.map((movie, index) => (
+                  <motion.div
+                    key={`grid-${movie.id}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index % 4 * 0.1 }}
+                    whileHover={{ y: -5 }}
+                    className={`group relative rounded-2xl overflow-hidden border flex flex-col transition-all duration-300 ${isDarkMode ? 'bg-[#141414] border-gray-800 hover:border-gray-700 shadow-lg' : 'bg-white border-gray-200 hover:border-gray-300 shadow-md'}`}
+                  >
+                    <div className="relative aspect-[2/3] overflow-hidden">
+                      <img 
+                        src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
+                        alt={movie.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className={`font-bold text-lg leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {movie.title}
+                        </h3>
+                        <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg text-yellow-500 shrink-0">
+                          <Star size={12} className="fill-current" />
+                          <span className="text-xs font-black">{movie.rating || 0}</span>
+                        </div>
+                      </div>
+                      <p className={`text-xs line-clamp-3 mb-4 flex-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {movie.description}
+                      </p>
+
+                      <div className="flex flex-col gap-2 mt-auto">
+                        {movie.viewUrl && (
+                          <motion.a 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            href={movie.viewUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-white via-gray-400 to-black animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
+                          >
+                            <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                              View Now
+                            </span>
+                          </motion.a>
+                        )}
+                        <motion.a 
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          href={movie.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="relative flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-black via-gray-600 to-white animate-gradient rounded-xl text-xs font-bold shadow-lg transition-all isolate overflow-hidden"
+                        >
+                          <span className="flex items-center gap-1.5 mix-blend-difference text-white">
+                            Download
+                          </span>
+                        </motion.a>
+                      </div>
+                      
+                      {isAdmin && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
+                          <button 
+                            onClick={() => handleEdit(movie)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                          >
+                            <Edit size={12} />
+                            EDIT
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(movie.id)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            DELETE
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className={`text-center py-20 rounded-2xl border ${isDarkMode ? 'bg-[#141414] border-gray-800' : 'bg-white border-gray-200'}`}>
