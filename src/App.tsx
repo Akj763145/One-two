@@ -3,7 +3,7 @@ import { Sun, Moon, Search, MoreVertical, Shield, Plus, X, Edit, Trash2, Link as
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Mousewheel, Parallax } from 'swiper/modules';
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useInView } from 'framer-motion';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 
@@ -37,15 +37,12 @@ const SmoothImage = ({ src, alt, className, parallax }: { src: string, alt: stri
   
   return (
     <div className="relative w-full h-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-      <motion.img
+      <img
         src={src}
         alt={alt}
         data-swiper-parallax={parallax}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isLoaded ? 1 : 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
         onLoad={() => setIsLoaded(true)}
-        className={`${className} w-full h-full`}
+        className={`${className} w-full h-full ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
       />
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -56,74 +53,20 @@ const SmoothImage = ({ src, alt, className, parallax }: { src: string, alt: stri
   );
 };
 
-// 3D Tilt Card Component
-const TiltCard = ({ children, className, isDarkMode }: { children: React.ReactNode, className: string, isDarkMode: boolean }) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [20, -20]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-20, 20]);
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const xPct = px / width - 0.5;
-    const yPct = py / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
-    mouseX.set(px);
-    mouseY.set(py);
-  };
-
-  const handlePointerLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
+// 4D Scroll Reveal Card Component (Animation Removed)
+const ScrollRevealCard = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="w-full h-full" style={{ perspective: "1200px" }}>
-      <motion.div
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        style={{
-          rotateY,
-          rotateX,
-          transformStyle: "preserve-3d",
-        }}
-        className={`${className} cursor-pointer touch-pan-y relative`}
-      >
-        <div 
-          style={{ 
-            transform: "translateZ(60px)", 
-            transformStyle: "preserve-3d" 
-          }} 
-          className="h-full flex flex-col pointer-events-none"
-        >
-          <div className="pointer-events-auto h-full flex flex-col">
-            {children}
-          </div>
-        </div>
-        
-        {/* Dynamic Shadow */}
-        <motion.div
-          style={{
-            transform: "translateZ(-20px)",
-            boxShadow: useTransform(
-              [mouseXSpring, mouseYSpring],
-              ([xS, yS]) => `${-xS * 30}px ${-yS * 30}px 40px rgba(0,0,0,0.4)`
-            ),
-          }}
-          className="absolute inset-4 rounded-2xl pointer-events-none -z-10"
-        />
-      </motion.div>
+    <div className="h-full">
+      {children}
+    </div>
+  );
+};
+
+// 3D Tilt Card Component (Effect Removed)
+const TiltCard = ({ children, className }: { children: React.ReactNode, className: string, isDarkMode: boolean }) => {
+  return (
+    <div className={className}>
+      {children}
     </div>
   );
 };
@@ -132,7 +75,7 @@ export default function App() {
   // State
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -158,11 +101,6 @@ export default function App() {
   // Load from Supabase or Local Storage
   useEffect(() => {
     fetchMovies();
-    
-    // Check system preference for dark mode initially
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setIsDarkMode(true);
-    }
   }, []);
 
   // Save to local storage when movies change (fallback mode)
@@ -368,7 +306,7 @@ export default function App() {
               <span className="text-red-500">MOVIE</span>
               <span className={isDarkMode ? 'text-white' : 'text-black'}>WALLAH</span>
             </h1>
-            <span className="text-[9px] tracking-[0.25em] text-gray-500 uppercase font-bold leading-none">Download Any Movie</span>
+            <span className="text-[9px] tracking-[0.25em] text-gray-500 uppercase font-bold leading-none">Download Any Movie • Made by AYUSH</span>
           </div>
         </div>
         
@@ -614,19 +552,9 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {filteredMovies.map((movie, index) => (
-                    <motion.div
+                    <div
                       key={`grid-${movie.id}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "100px" }}
-                      transition={{ 
-                        duration: 0.4,
-                        ease: "easeOut",
-                        delay: (index % 4) * 0.05 
-                      }}
-                      className="perspective-1000 h-full"
+                      className="h-full"
                     >
                       <TiltCard
                         isDarkMode={isDarkMode}
@@ -655,9 +583,7 @@ export default function App() {
 
                           <div className="flex flex-col gap-2 mt-auto">
                             {movie.viewUrl && (
-                              <motion.a 
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                              <a 
                                 href={movie.viewUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
@@ -666,11 +592,9 @@ export default function App() {
                                 <span className="flex items-center gap-1.5 mix-blend-difference text-white">
                                   View Now
                                 </span>
-                              </motion.a>
+                              </a>
                             )}
-                            <motion.a 
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                            <a 
                               href={movie.url} 
                               target="_blank" 
                               rel="noopener noreferrer" 
@@ -679,7 +603,7 @@ export default function App() {
                               <span className="flex items-center gap-1.5 mix-blend-difference text-white">
                                 Download
                               </span>
-                            </motion.a>
+                            </a>
                           </div>
                           
                           {isAdmin && (
@@ -702,7 +626,7 @@ export default function App() {
                           )}
                         </div>
                       </TiltCard>
-                    </motion.div>
+                    </div>
                   ))}
                 </AnimatePresence>
               </div>
