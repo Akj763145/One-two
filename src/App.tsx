@@ -369,13 +369,13 @@ export default function App() {
                 sensitivity: 1,
                 forceToAxis: true,
               }}
-              speed={1000}
+              speed={600}
               parallax={true}
               coverflowEffect={{
                 rotate: 0,
                 stretch: 0,
                 depth: 100,
-                modifier: 2.5,
+                modifier: 1.5,
                 slideShadows: false,
               }}
               modules={[EffectCoverflow, Mousewheel, Parallax]}
@@ -383,24 +383,20 @@ export default function App() {
             >
               {filteredMovies.map((movie, index) => (
                 <SwiperSlide key={movie.id} className="!w-[220px] sm:!w-[260px] md:!w-[300px]">
-                  <motion.div 
-                    layout
-                    initial={{ scale: 0.8, opacity: 0, y: 50 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 20,
-                      mass: 1,
-                      delay: index * 0.05,
-                    }}
-                    whileHover={{ 
-                      scale: 1.05, 
-                      y: -15,
-                      transition: { type: "spring", stiffness: 400, damping: 25 }
-                    }}
-                    className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full transition-shadow duration-500 ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_80px_rgba(0,0,0,0.7)]' : 'bg-white border-gray-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_80px_rgba(0,0,0,0.2)]'}`}
-                  >
+                    <motion.div 
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.4,
+                        ease: [0.23, 1, 0.32, 1],
+                        delay: index * 0.03,
+                      }}
+                      whileHover={{ 
+                        y: -10,
+                        transition: { duration: 0.3, ease: "easeOut" }
+                      }}
+                      className={`group relative rounded-2xl overflow-hidden border flex flex-col h-full will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-xl' : 'bg-white border-gray-200 shadow-md'}`}
+                    >
                     <div className="block relative aspect-[1/1] overflow-hidden">
                       <img 
                         src={movie.posterUrl || 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&q=80&w=600&h=900'} 
@@ -501,32 +497,26 @@ export default function App() {
                 </div>
               </div>
 
-              <motion.div 
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <AnimatePresence mode="popLayout">
                   {filteredMovies.map((movie, index) => (
                     <motion.div
                       key={`grid-${movie.id}`}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
                       whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
+                      viewport={{ once: true, margin: "-50px" }}
                       transition={{ 
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
+                        duration: 0.4,
+                        ease: [0.23, 1, 0.32, 1],
                         delay: (index % 4) * 0.05 
                       }}
                       whileHover={{ 
-                        y: -10,
-                        scale: 1.02,
-                        transition: { type: "spring", stiffness: 400, damping: 25 }
+                        y: -8,
+                        transition: { duration: 0.2, ease: "easeOut" }
                       }}
-                      className={`group relative rounded-2xl overflow-hidden border flex flex-col transition-all duration-500 ${isDarkMode ? 'bg-[#141414] border-gray-800 hover:border-gray-700 shadow-lg hover:shadow-2xl' : 'bg-white border-gray-200 hover:border-gray-300 shadow-md hover:shadow-xl'}`}
+                      className={`group relative rounded-2xl overflow-hidden border flex flex-col will-change-transform ${isDarkMode ? 'bg-[#141414] border-gray-800 shadow-lg' : 'bg-white border-gray-200 shadow-sm'}`}
                     >
                     <div className="relative aspect-[2/3] overflow-hidden">
                       <img 
@@ -600,7 +590,7 @@ export default function App() {
                   </motion.div>
                 ))}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             </div>
           </div>
         ) : (
