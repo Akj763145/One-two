@@ -4,6 +4,8 @@ import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
+import AdsterraAd from './components/AdsterraAd';
+import AdsterraNativeBanner from './components/AdsterraNativeBanner';
 import 'swiper/css';
 import 'swiper/css/free-mode';
 
@@ -523,19 +525,30 @@ export default function App() {
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                     Search Results <span className="text-white/50 font-normal text-lg">for "{searchQuery}"</span>
                   </h2>
-                  {filteredMovies.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                      {filteredMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
-                      ))}
+                  <div className="flex flex-col lg:flex-row gap-8">
+                    <div className="flex-1">
+                      {filteredMovies.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                          {filteredMovies.map(movie => (
+                            <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
+                          <Search size={48} className="mx-auto mb-4 text-white/20" />
+                          <h3 className="text-xl font-bold mb-2">No results found</h3>
+                          <p className="text-white/50">Try adjusting your search query.</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
-                      <Search size={48} className="mx-auto mb-4 text-white/20" />
-                      <h3 className="text-xl font-bold mb-2">No results found</h3>
-                      <p className="text-white/50">Try adjusting your search query.</p>
+                    
+                    {/* 160x300 Vertical Banner Ad */}
+                    <div className="hidden lg:block w-[160px] shrink-0">
+                      <div className="sticky top-24">
+                        <AdsterraAd adKey="48fc53489149f9fac60634e87fd9f134" width={160} height={300} />
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ) : (
                 <>
@@ -564,38 +577,57 @@ export default function App() {
                       </Swiper>
                     </div>
                   )}
+                  
+                  {/* Adsterra Native Banner Ad */}
+                  <div className="my-12">
+                    <AdsterraNativeBanner />
+                  </div>
 
                   {/* All Movies Grid */}
                   <div className="mb-12">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl md:text-2xl font-bold tracking-tight">Watch Next</h2>
                     </div>
-                    <motion.div 
-                      initial="hidden"
-                      animate="visible"
-                      variants={{
-                        visible: { transition: { staggerChildren: 0.05 } }
-                      }}
-                      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 md:gap-8"
-                    >
-                      {movies.map((movie) => (
-                        <motion.div
-                          key={movie.id}
-                          variants={{
-                            hidden: { opacity: 0, y: 20 },
-                            visible: { opacity: 1, y: 0 }
-                          }}
-                        >
-                          <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
-                        </motion.div>
-                      ))}
-                    </motion.div>
+                    <div className="flex flex-col lg:flex-row gap-8">
+                      <motion.div 
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                          visible: { transition: { staggerChildren: 0.05 } }
+                        }}
+                        className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
+                      >
+                        {movies.map((movie) => (
+                          <motion.div
+                            key={movie.id}
+                            variants={{
+                              hidden: { opacity: 0, y: 20 },
+                              visible: { opacity: 1, y: 0 }
+                            }}
+                          >
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                      
+                      {/* 160x300 Vertical Banner Ad */}
+                      <div className="hidden lg:block w-[160px] shrink-0">
+                        <div className="sticky top-24">
+                          <AdsterraAd adKey="48fc53489149f9fac60634e87fd9f134" width={160} height={300} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
             </div>
           </>
         )}
+        
+        {/* Adsterra Banner Ad */}
+        <div className="px-6 md:px-16 mt-12">
+          <AdsterraAd />
+        </div>
       </main>
       
       {/* Footer */}
