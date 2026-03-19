@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Moon, Sun } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Moon, Sun, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel } from 'swiper/modules';
@@ -15,8 +15,6 @@ interface Movie {
   posterUrl: string;
   description: string;
   created_at?: string;
-  rating?: number;
-  views?: number;
 }
 
 const INITIAL_MOVIES: Movie[] = [
@@ -26,9 +24,7 @@ const INITIAL_MOVIES: Movie[] = [
     url: '#',
     viewUrl: '#',
     posterUrl: 'https://picsum.photos/seed/raja/600/900',
-    description: 'Download now',
-    rating: 8.5,
-    views: 1250
+    description: 'Download now'
   }
 ];
 
@@ -103,6 +99,7 @@ const Navbar: React.FC<{
 }> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isDark, toggleTheme, isSearchActive, setIsSearchActive }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -154,12 +151,58 @@ const Navbar: React.FC<{
 
         <div className="flex items-center gap-3">
           {isAdmin && (
-            <button 
-              onClick={onAddClick}
-              className="apple-btn-primary !py-2 !px-4 !text-xs hidden sm:flex"
-            >
-              <Plus size={16} /> Add Movie
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowAdminMenu(!showAdminMenu)}
+                className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-zinc-800 transition-all shadow-lg border border-white/10"
+                title="Admin Options"
+              >
+                <MoreVertical size={20} />
+              </button>
+
+              <AnimatePresence>
+                {showAdminMenu && (
+                  <>
+                    <div className="fixed inset-0 z-[-1]" onClick={() => setShowAdminMenu(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="absolute right-0 mt-3 w-56 bg-zinc-900 text-white rounded-2xl p-2 shadow-2xl border border-white/10 overflow-hidden"
+                    >
+                      <div className="px-4 py-2 text-[10px] font-bold text-white/30 uppercase tracking-widest">Admin Control</div>
+                      <button 
+                        onClick={() => { onAddClick(); setShowAdminMenu(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+                      >
+                        <Plus size={18} className="text-emerald-400" /> Add New Movie
+                      </button>
+                      <button 
+                        onClick={() => setShowAdminMenu(false)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium opacity-50 cursor-not-allowed"
+                      >
+                        <Shield size={18} className="text-blue-400" /> Admin Dashboard
+                      </button>
+                      <button 
+                        onClick={() => setShowAdminMenu(false)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium opacity-50 cursor-not-allowed"
+                      >
+                        <Star size={18} className="text-yellow-400" /> Featured Content
+                      </button>
+                      
+                      <div className="h-px bg-white/10 my-1" />
+                      
+                      <button 
+                        onClick={() => { onLogout(); setShowAdminMenu(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/20 text-red-500 transition-colors text-sm font-medium"
+                      >
+                        <LogOut size={18} /> Logout Admin
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           )}
           
           <div className="relative">
@@ -167,7 +210,7 @@ const Navbar: React.FC<{
               onClick={() => setShowMenu(!showMenu)}
               className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-current opacity-50 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all"
             >
-              <MoreVertical size={20} />
+              {isAdmin ? <Settings size={20} /> : <MoreVertical size={20} />}
             </button>
 
             <AnimatePresence>
@@ -189,33 +232,17 @@ const Navbar: React.FC<{
                       {isDark ? 'Light Mode' : 'Dark Mode'}
                     </button>
                     
-                    <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
-                    
-                    <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">
-                      {isAdmin ? 'Admin Functions' : 'Account'}
-                    </div>
-                    {isAdmin ? (
+                    {!isAdmin && (
                       <>
+                        <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
+                        <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">Account</div>
                         <button 
-                          onClick={() => { onAddClick(); setShowMenu(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-medium sm:hidden"
+                          onClick={() => { onAdminClick(); setShowMenu(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-medium"
                         >
-                          <Plus size={18} /> Add Movie
-                        </button>
-                        <button 
-                          onClick={() => { onLogout(); setShowMenu(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors text-sm font-medium"
-                        >
-                          <LogOut size={18} /> Logout
+                          <Shield size={18} /> Admin Login
                         </button>
                       </>
-                    ) : (
-                      <button 
-                        onClick={() => { onAdminClick(); setShowMenu(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-medium"
-                      >
-                        <Shield size={18} /> Admin Login
-                      </button>
                     )}
                   </motion.div>
                 </>
@@ -247,7 +274,7 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: '', rating: 0, views: 0
+    title: '', url: '', viewUrl: '', posterUrl: '', description: ''
   });
 
   useEffect(() => {
@@ -343,7 +370,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', rating: 0, views: 0 });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' });
     setEditingMovie(null);
   };
 
@@ -351,8 +378,7 @@ export default function App() {
     setEditingMovie(movie);
     setFormData({
       title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
-      posterUrl: movie.posterUrl, description: movie.description, rating: movie.rating || 0,
-      views: movie.views || 0
+      posterUrl: movie.posterUrl, description: movie.description
     });
     setShowAddEditModal(true);
   };
@@ -365,21 +391,7 @@ export default function App() {
   };
 
   const handleDownload = async (movieId: string) => {
-    const movie = movies.find(m => m.id === movieId);
-    if (!movie) return;
-
-    const newViews = (movie.views || 0) + 1;
-    
-    // Update local state
-    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: newViews } : m));
-
-    // Update database if available
-    if (supabase) {
-      await supabase
-        .from('movies')
-        .update({ views: newViews })
-        .eq('id', movieId);
-    }
+    // Download tracking removed
   };
 
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -633,10 +645,8 @@ export default function App() {
                   <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Download URL *</label><input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
                   <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Watch URL (Optional)</label><input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Rating (0-10)</label><input type="number" min="0" max="10" step="0.1" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value) || 0})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. 8.5" /></div>
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Views</label><input type="number" min="0" value={formData.views} onChange={(e) => setFormData({...formData, views: parseInt(e.target.value) || 0})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. 1000" /></div>
                 </div>
                 <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
                 <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button type="submit" className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-bold rounded-xl py-3 transition-opacity">{editingMovie ? 'Save Changes' : 'Add Movie'}</button></div>
@@ -726,21 +736,7 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
           </div>
         )}
 
-        {/* Rating & Views Badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-          {movie.rating && (
-            <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 border border-white/10">
-              <Star size={12} className="text-yellow-500 fill-current" />
-              <span className="text-[10px] font-bold text-white">{movie.rating}</span>
-            </div>
-          )}
-          {movie.views !== undefined && (
-            <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 border border-white/10">
-              <Eye size={12} className="text-blue-400" />
-              <span className="text-[10px] font-bold text-white">{movie.views >= 1000 ? (movie.views / 1000).toFixed(1) + 'k' : movie.views}</span>
-            </div>
-          )}
-        </div>
+        {/* Rating & Views Badges removed */}
 
         {/* Subtle overlay on hover */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
