@@ -316,7 +316,7 @@ export default function App() {
       return;
     }
     setIsLoading(true);
-    const { data, error } = await supabase.from('movies').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at').order('created_at', { ascending: false });
     if (!error && data) setMovies(data);
     setIsLoading(false);
   };
@@ -359,7 +359,7 @@ export default function App() {
         if (error) return setErrorMsg('Error updating movie: ' + error.message);
         setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
       } else {
-        const { data, error } = await supabase.from('movies').insert([movieData]).select();
+        const { data, error } = await supabase.from('movies').insert([movieData]).select('id, title, url, viewUrl, posterUrl, description, created_at');
         if (error) return setErrorMsg('Error adding movie: ' + error.message);
         if (data && data.length > 0) setMovies([...data, ...movies]);
         else {
@@ -412,7 +412,7 @@ export default function App() {
         onLogout={() => setIsAdmin(false)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', rating: 0, views: 0 }); setShowAddEditModal(true); }}
+        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' }); setShowAddEditModal(true); }}
         isDark={isDark}
         toggleTheme={toggleTheme}
         isSearchActive={isSearchActive}
@@ -671,7 +671,6 @@ export default function App() {
 }
 
 const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void }> = ({ movie, isAdmin, onEdit, onDelete, onDownload }) => {
-  const [showCardMenu, setShowCardMenu] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   return (
@@ -697,45 +696,6 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
           loading="lazy"
         />
         
-        {/* Admin Menu */}
-        {isAdmin && (
-          <div className="absolute top-2 left-2 z-20">
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowCardMenu(!showCardMenu); }}
-              className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/80"
-            >
-              <MoreVertical size={16} />
-            </button>
-
-            <AnimatePresence>
-              {showCardMenu && (
-                <>
-                  <div className="fixed inset-0 z-[-1]" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowCardMenu(false); }} />
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9, x: -10 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, x: -10 }}
-                    className="absolute left-0 mt-2 w-32 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-black/5 dark:border-white/10 p-1 overflow-hidden"
-                  >
-                    <button 
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(movie); setShowCardMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold text-current transition-colors"
-                    >
-                      <Edit size={14} className="text-blue-500" /> Edit
-                    </button>
-                    <button 
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(movie.id); setShowCardMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/10 text-xs font-bold text-red-500 transition-colors"
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
         {/* Rating & Views Badges removed */}
 
         {/* Subtle overlay on hover */}
@@ -747,26 +707,45 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
           {movie.title}
         </h3>
         
-        <div className="flex items-center gap-2">
-          {movie.viewUrl && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {movie.viewUrl && (
+              <a 
+                href={movie.viewUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
+              >
+                <Play size={14} className="fill-current" /> Watch
+              </a>
+            )}
             <a 
-              href={movie.viewUrl} 
+              href={movie.url} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
+              onClick={() => onDownload(movie.id)}
+              className="flex-1 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-black/10 dark:hover:bg-white/20 transition-all active:scale-95"
             >
-              <Play size={14} className="fill-current" /> Watch
+              <Download size={14} /> Download
             </a>
+          </div>
+
+          {isAdmin && (
+            <div className="flex items-center gap-2 pt-1 border-t border-black/5 dark:border-white/5 mt-1">
+              <button 
+                onClick={() => onEdit(movie)}
+                className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              >
+                <Edit size={14} /> Edit
+              </button>
+              <button 
+                onClick={() => onDelete(movie.id)}
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </div>
           )}
-          <a 
-            href={movie.url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            onClick={() => onDownload(movie.id)}
-            className="flex-1 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-black/10 dark:hover:bg-white/20 transition-all active:scale-95"
-          >
-            <Download size={14} /> Download
-          </a>
         </div>
       </div>
     </motion.div>
