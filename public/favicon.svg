@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0f0f0f" />
+  
+  <!-- Outer White Circle -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#ffffff" stroke-width="12" />
+  
+  <!-- Inner Red Arcs -->
+  <!-- Left break: 160 to 200 degrees, Right break: 340 to 20 degrees -->
+  <!-- Top arc from 20 to 160 degrees -->
+  <path d="M 436 182 A 195 195 0 0 0 76 182" fill="none" stroke="#e53935" stroke-width="6" stroke-linecap="butt" />
+  <!-- Bottom arc from 200 to 340 degrees -->
+  <path d="M 76 330 A 195 195 0 0 0 436 330" fill="none" stroke="#e53935" stroke-width="6" stroke-linecap="butt" />
+
+  <!-- Letters M and W -->
+  <text x="256" y="190" font-family="'Times New Roman', Times, serif" font-size="200" fill="#ffffff" text-anchor="middle" dominant-baseline="central">M</text>
+  <text x="256" y="340" font-family="'Times New Roman', Times, serif" font-size="200" fill="#ffffff" text-anchor="middle" dominant-baseline="central">W</text>
+</svg>
