@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Moon, Sun, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -400,14 +400,14 @@ export default function App() {
     setEditingMovie(null);
   };
 
-  const handleEdit = (movie: Movie) => {
+  const handleEdit = useCallback((movie: Movie) => {
     setEditingMovie(movie);
     setFormData({
       title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
       posterUrl: movie.posterUrl, description: movie.description
     });
     setShowAddEditModal(true);
-  };
+  }, []);
 
   const confirmDelete = async () => {
     if (!movieToDelete) return;
@@ -416,35 +416,33 @@ export default function App() {
     setMovieToDelete(null);
   };
 
-  const handleDownload = async (movieId: string) => {
+  const handleDownload = useCallback(async (movieId: string) => {
+    // Optimistic UI update for instant, lag-free feedback
+    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: (m.downloads || 0) + 1 } : m));
+    
     if (!supabase) return;
     try {
-      // Increment downloads count in Supabase
       const { data: movie } = await supabase.from('movies').select('downloads').eq('id', movieId).single();
       const currentDownloads = movie?.downloads || 0;
       await supabase.from('movies').update({ downloads: currentDownloads + 1 }).eq('id', movieId);
-      
-      // Update local state
-      setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: (m.downloads || 0) + 1 } : m));
     } catch (err) {
       console.error('Error tracking download:', err);
     }
-  };
+  }, []);
 
-  const handleView = async (movieId: string) => {
+  const handleView = useCallback(async (movieId: string) => {
+    // Optimistic UI update for instant, lag-free feedback
+    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: (m.views || 0) + 1 } : m));
+    
     if (!supabase) return;
     try {
-      // Increment views count in Supabase
       const { data: movie } = await supabase.from('movies').select('views').eq('id', movieId).single();
       const currentViews = movie?.views || 0;
       await supabase.from('movies').update({ views: currentViews + 1 }).eq('id', movieId);
-      
-      // Update local state
-      setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: (m.views || 0) + 1 } : m));
     } catch (err) {
       console.error('Error tracking view:', err);
     }
-  };
+  }, []);
 
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const featuredMovies = movies.slice(0, 5);
@@ -494,6 +492,8 @@ export default function App() {
                       alt={featuredMovie.title} 
                       className="w-full h-full object-cover" 
                       referrerPolicy="no-referrer"
+                      decoding="async"
+                      fetchPriority="high"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
@@ -735,15 +735,42 @@ export default function App() {
   );
 }
 
-const MovieCard: React.FC<{ 
+const MovieCard = React.memo(({ 
+  movie, 
+  isAdmin, 
+  onEdit, 
+  onDelete, 
+  onDownload,
+  onView
+}: { 
   movie: Movie, 
   isAdmin: boolean, 
   onEdit: (m: Movie) => void, 
   onDelete: (id: string) => void, 
   onDownload: (id: string) => void,
   onView: (id: string) => void
-}> = ({ movie, isAdmin, onEdit, onDelete, onDownload, onView }) => {
+}) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px' }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <motion.div
@@ -751,7 +778,7 @@ const MovieCard: React.FC<{
       transition={{ duration: 0.3 }}
       className="flex flex-col gap-3 group w-full"
     >
-      <div className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
+      <div ref={imgRef} className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
         {/* Skeleton Loader */}
         {!isImageLoaded && (
           <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse flex items-center justify-center">
@@ -759,14 +786,17 @@ const MovieCard: React.FC<{
           </div>
         )}
         
-        <img 
-          src={movie.posterUrl} 
-          alt={movie.title} 
-          onLoad={() => setIsImageLoaded(true)}
-          className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`} 
-          referrerPolicy="no-referrer"
-          loading="lazy"
-        />
+        {isInView && (
+          <img 
+            src={movie.posterUrl} 
+            alt={movie.title} 
+            onLoad={() => setIsImageLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`} 
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
         
         {/* Stats Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -831,4 +861,4 @@ const MovieCard: React.FC<{
       </div>
     </motion.div>
   );
-};
+});
