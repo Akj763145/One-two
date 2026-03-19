@@ -76,9 +76,14 @@ const Logo: React.FC<{ className?: string, showText?: boolean }> = ({ className 
             <span className="text-red-600 font-bold text-xl md:text-2xl tracking-tight uppercase">Movie</span>
             <span className="text-current font-bold text-xl md:text-2xl tracking-tight uppercase">Wallah</span>
           </div>
-          <span className="text-[8px] md:text-[10px] text-current opacity-40 tracking-[0.2em] uppercase font-medium mt-0.5">
-            Download Any Movie
-          </span>
+          <div className="flex flex-col mt-0.5 leading-tight">
+            <span className="text-[7px] md:text-[9px] text-current opacity-40 tracking-[0.15em] uppercase font-medium">
+              Proudly made by Bihari
+            </span>
+            <span className="text-[6px] md:text-[8px] text-red-600 dark:text-red-500 tracking-[0.2em] uppercase font-bold">
+              Developed by AYUSH
+            </span>
+          </div>
         </div>
       )}
     </div>
@@ -599,8 +604,8 @@ export default function App() {
           <Logo className="scale-125" />
           
           <div className="flex flex-col items-center gap-2">
-            <p className="text-black/40 dark:text-white/40 text-sm font-medium">Proudly made by Bihari</p>
-            <p className="text-black/20 dark:text-white/20 text-xs">(Ayush and Ayush)</p>
+            <p className="text-black/40 dark:text-white/40 text-sm font-medium uppercase tracking-[0.2em]">Proudly made by Bihari</p>
+            <p className="text-red-600 dark:text-red-500 text-xs font-bold uppercase tracking-[0.3em]">Developed by AYUSH</p>
           </div>
           
           <div className="flex items-center gap-6 text-black/30 dark:text-white/30 text-xs uppercase tracking-widest font-bold">
