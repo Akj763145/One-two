@@ -330,7 +330,7 @@ export default function App() {
     if (movies.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % Math.min(movies.length, 5));
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [movies.length]);
 
