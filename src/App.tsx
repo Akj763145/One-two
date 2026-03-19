@@ -15,6 +15,8 @@ interface Movie {
   posterUrl: string;
   description: string;
   created_at?: string;
+  views?: number;
+  downloads?: number;
 }
 
 const INITIAL_MOVIES: Movie[] = [
@@ -321,8 +323,27 @@ export default function App() {
       return;
     }
     setIsLoading(true);
-    const { data, error } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at').order('created_at', { ascending: false });
-    if (!error && data) setMovies(data);
+    try {
+      // Try fetching with views and downloads
+      const { data, error } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at, views, downloads').order('created_at', { ascending: false });
+      
+      if (error) {
+        console.warn('Extended query failed, trying basic query:', error.message);
+        // Fallback to basic query if columns don't exist yet
+        const { data: basicData, error: basicError } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at').order('created_at', { ascending: false });
+        if (!basicError && basicData) {
+          setMovies(basicData);
+        } else if (basicError) {
+          console.error('Basic query also failed:', basicError.message);
+          setErrorMsg('Failed to load movies. Please check your database connection.');
+        }
+      } else if (data) {
+        setMovies(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching movies:', err);
+      setErrorMsg('An unexpected error occurred while loading movies.');
+    }
     setIsLoading(false);
   };
 
@@ -396,7 +417,33 @@ export default function App() {
   };
 
   const handleDownload = async (movieId: string) => {
-    // Download tracking removed
+    if (!supabase) return;
+    try {
+      // Increment downloads count in Supabase
+      const { data: movie } = await supabase.from('movies').select('downloads').eq('id', movieId).single();
+      const currentDownloads = movie?.downloads || 0;
+      await supabase.from('movies').update({ downloads: currentDownloads + 1 }).eq('id', movieId);
+      
+      // Update local state
+      setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: (m.downloads || 0) + 1 } : m));
+    } catch (err) {
+      console.error('Error tracking download:', err);
+    }
+  };
+
+  const handleView = async (movieId: string) => {
+    if (!supabase) return;
+    try {
+      // Increment views count in Supabase
+      const { data: movie } = await supabase.from('movies').select('views').eq('id', movieId).single();
+      const currentViews = movie?.views || 0;
+      await supabase.from('movies').update({ views: currentViews + 1 }).eq('id', movieId);
+      
+      // Update local state
+      setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: (m.views || 0) + 1 } : m));
+    } catch (err) {
+      console.error('Error tracking view:', err);
+    }
   };
 
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -431,8 +478,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Hero Section */}
-            {featuredMovie && !searchQuery && !isSearchActive && (
+      {featuredMovie && !searchQuery && !isSearchActive && (
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden">
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -454,6 +500,14 @@ export default function App() {
                     
                     <div className="absolute inset-0 flex items-end pb-20 md:pb-32 px-6 md:px-16">
                       <div className="max-w-3xl">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
+                            <Eye size={14} /> {featuredMovie.views || 0}
+                          </div>
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
+                            <Download size={14} /> {featuredMovie.downloads || 0}
+                          </div>
+                        </div>
                         <motion.h1 
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -479,7 +533,13 @@ export default function App() {
                           className="flex flex-wrap items-center gap-5"
                         >
                           {featuredMovie.viewUrl && (
-                            <a href={featuredMovie.viewUrl} target="_blank" rel="noopener noreferrer" className="apple-btn-primary !bg-white !text-black !px-10 !py-4 !text-lg">
+                            <a 
+                              href={featuredMovie.viewUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              onClick={() => handleView(featuredMovie.id)}
+                              className="apple-btn-primary !bg-white !text-black !px-10 !py-4 !text-lg"
+                            >
                               <Play size={24} className="fill-current" /> Play Now
                             </a>
                           )}
@@ -526,7 +586,7 @@ export default function App() {
                   {filteredMovies.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                       {filteredMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
+                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
                       ))}
                     </div>
                   ) : (
@@ -558,7 +618,7 @@ export default function App() {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -586,7 +646,7 @@ export default function App() {
                             visible: { opacity: 1, y: 0 }
                           }}
                         >
-                          <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
+                          <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
                         </motion.div>
                       ))}
                     </motion.div>
@@ -675,7 +735,14 @@ export default function App() {
   );
 }
 
-const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void }> = ({ movie, isAdmin, onEdit, onDelete, onDownload }) => {
+const MovieCard: React.FC<{ 
+  movie: Movie, 
+  isAdmin: boolean, 
+  onEdit: (m: Movie) => void, 
+  onDelete: (id: string) => void, 
+  onDownload: (id: string) => void,
+  onView: (id: string) => void
+}> = ({ movie, isAdmin, onEdit, onDelete, onDownload, onView }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   return (
@@ -701,7 +768,15 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
           loading="lazy"
         />
         
-        {/* Rating & Views Badges removed */}
+        {/* Stats Badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
+            <Eye size={10} /> {movie.views || 0}
+          </div>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
+            <Download size={10} /> {movie.downloads || 0}
+          </div>
+        </div>
 
         {/* Subtle overlay on hover */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -719,6 +794,7 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
                 href={movie.viewUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
+                onClick={() => onView(movie.id)}
                 className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
               >
                 <Play size={14} className="fill-current" /> Watch
