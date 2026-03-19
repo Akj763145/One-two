@@ -1,25 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-black dark:bg-black dark:text-white antialiased selection:bg-red-500/30;
+    overflow-x: hidden;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
 }
 
 @layer utilities {
-  .animate-gradient {
-    background-size: 300% 300%;
-    animation: gradient 4s ease infinite;
+  .glass-nav {
+    @apply bg-black/50 backdrop-blur-2xl border-b border-white/10;
   }
-  .perspective-1000 {
-    perspective: 1000px;
+  .glass-panel {
+    @apply bg-black/5 dark:bg-white/10 backdrop-blur-xl border border-black/10 dark:border-white/10;
   }
-  .preserve-3d {
-    transform-style: preserve-3d;
+  .apple-btn-primary {
+    @apply bg-black dark:bg-white text-white dark:text-black font-semibold rounded-full px-6 py-2.5 hover:scale-105 transition-transform duration-300 flex items-center gap-2;
+  }
+  .apple-btn-secondary {
+    @apply bg-black/5 dark:bg-white/20 text-black dark:text-white font-semibold rounded-full px-6 py-2.5 hover:bg-black/10 dark:hover:bg-white/30 hover:scale-105 transition-all duration-300 flex items-center gap-2 backdrop-blur-md border border-black/5 dark:border-white/10;
+  }
+  .text-shadow-lg {
+    text-shadow: 0 4px 12px rgba(0,0,0,0.5);
   }
 }
 
-@keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.swiper {
+  overflow: visible !important;
+}
+.swiper-slide {
+  width: auto !important;
 }
