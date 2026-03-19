@@ -611,8 +611,17 @@ export default function App() {
                       <Swiper
                         slidesPerView="auto"
                         spaceBetween={24}
-                        freeMode={true}
-                        mousewheel={{ forceToAxis: true }}
+                        freeMode={{
+                          enabled: true,
+                          momentum: true,
+                          momentumRatio: 1.5,
+                          momentumVelocityRatio: 1.5,
+                        }}
+                        mousewheel={{ 
+                          forceToAxis: true,
+                          sensitivity: 2.5,
+                        }}
+                        speed={600}
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
@@ -779,9 +788,10 @@ const MovieCard = React.memo(({
       layout
       whileHover={{ y: -8, scale: 1.02 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      style={{ willChange: "transform" }}
       className="flex flex-col gap-3 group w-full"
     >
-      <div ref={imgRef} className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
+      <div ref={imgRef} style={{ transform: "translateZ(0)" }} className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
         {/* Skeleton Loader */}
         {!isImageLoaded && (
           <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse flex items-center justify-center">
