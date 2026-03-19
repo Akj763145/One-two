@@ -39,7 +39,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
       animate={{ opacity: 0 }}
       transition={{ delay: 2.5, duration: 1, ease: "easeInOut" }}
       onAnimationComplete={onComplete}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-black transition-colors duration-500"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black transition-colors duration-500"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0, filter: 'blur(10px)' }}
@@ -52,7 +52,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1, duration: 0.8 }}
-          className="text-black/50 dark:text-white/50 tracking-[0.2em] uppercase text-sm mt-12 font-medium"
+          className="text-white/50 tracking-[0.2em] uppercase text-sm mt-12 font-medium"
         >
           Movie Wallah Originals
         </motion.p>
@@ -84,7 +84,7 @@ const Logo: React.FC<{ className?: string, showText?: boolean }> = ({ className 
             <span className="text-[7px] md:text-[9px] text-current opacity-40 tracking-[0.15em] uppercase font-medium">
               Proudly made by Bihari
             </span>
-            <span className="text-[6px] md:text-[8px] text-red-600 dark:text-red-500 tracking-[0.2em] uppercase font-bold">
+            <span className="text-[6px] md:text-[8px] text-red-500 tracking-[0.2em] uppercase font-bold">
               Developed by AYUSH
             </span>
           </div>
@@ -117,8 +117,8 @@ const Navbar: React.FC<{
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 md:px-16 py-4 flex items-center justify-between ${
       isScrolled 
-        ? 'bg-white/80 dark:bg-black/90 backdrop-blur-2xl border-b border-black/5 dark:border-white/10 py-3' 
-        : 'bg-white/40 dark:bg-black/40 backdrop-blur-md border-b border-black/5 dark:border-white/5'
+        ? 'bg-black/90 backdrop-blur-2xl border-b border-white/10 py-3' 
+        : 'bg-black/40 backdrop-blur-md border-b border-white/5'
     }`}>
       <div className={`flex items-center gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
@@ -136,11 +136,11 @@ const Navbar: React.FC<{
             autoFocus={isSearchActive}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search movies, series, originals..." 
-            className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full pl-12 pr-12 py-3 text-sm focus:bg-black/10 dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-current/20 transition-all placeholder-current/20 shadow-xl"
+            className="w-full bg-white/5 border border-white/10 rounded-full pl-12 pr-12 py-3 text-sm focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-current/20 transition-all placeholder-current/20 shadow-xl"
           />
           <button 
             onClick={() => { setIsSearchActive(false); setSearchQuery(''); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
           >
             <X size={18} className="opacity-50" />
           </button>
@@ -151,7 +151,7 @@ const Navbar: React.FC<{
         {/* Search Toggle */}
         <button 
           onClick={() => setIsSearchActive(true)}
-          className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+          className="p-2 rounded-full hover:bg-white/5 transition-colors"
         >
           <Search size={22} className="opacity-60 hover:opacity-100 transition-opacity" />
         </button>
@@ -215,7 +215,7 @@ const Navbar: React.FC<{
           <div className="relative">
             <button 
               onClick={() => setShowMenu(!showMenu)}
-              className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex items-center justify-center text-current opacity-50 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+              className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-current opacity-50 hover:opacity-100 hover:bg-white/10 transition-all"
             >
               {isAdmin ? <Settings size={20} /> : <MoreVertical size={20} />}
             </button>
@@ -235,7 +235,7 @@ const Navbar: React.FC<{
                         <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">Account</div>
                         <button 
                           onClick={() => { onAdminClick(); setShowMenu(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-medium"
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium"
                         >
                           <Shield size={18} /> Admin Login
                         </button>
@@ -407,7 +407,7 @@ export default function App() {
   const trendingMovies = movies.slice(0, 10);
 
   return (
-    <div className={`min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
+    <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
       <AnimatePresence>
         {/* Welcome animation removed */}
       </AnimatePresence>
@@ -521,7 +521,7 @@ export default function App() {
               {searchQuery ? (
                 <div className="mb-12">
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    Search Results <span className="text-black/50 dark:text-white/50 font-normal text-lg">for "{searchQuery}"</span>
+                    Search Results <span className="text-white/50 font-normal text-lg">for "{searchQuery}"</span>
                   </h2>
                   {filteredMovies.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -530,10 +530,10 @@ export default function App() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-20 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10">
-                      <Search size={48} className="mx-auto mb-4 text-black/20 dark:text-white/20" />
+                    <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
+                      <Search size={48} className="mx-auto mb-4 text-white/20" />
                       <h3 className="text-xl font-bold mb-2">No results found</h3>
-                      <p className="text-black/50 dark:text-white/50">Try adjusting your search query.</p>
+                      <p className="text-white/50">Try adjusting your search query.</p>
                     </div>
                   )}
                 </div>
@@ -544,7 +544,7 @@ export default function App() {
                     <div className="mb-12">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl md:text-2xl font-bold tracking-tight">Trending Now</h2>
-                        <button className="text-sm font-medium text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white flex items-center transition-colors">
+                        <button className="text-sm font-medium text-white/50 hover:text-white flex items-center transition-colors">
                           See All <ChevronRight size={16} />
                         </button>
                       </div>
@@ -599,22 +599,22 @@ export default function App() {
       </main>
       
       {/* Footer */}
-      <footer className="py-16 px-6 md:px-16 border-t border-black/5 dark:border-white/10 bg-white dark:bg-black transition-colors duration-500">
+      <footer className="py-16 px-6 md:px-16 border-t border-white/10 bg-black transition-colors duration-500">
         <div className="flex flex-col items-center gap-8">
           <Logo className="scale-125" />
           
           <div className="flex flex-col items-center gap-2">
-            <p className="text-black/40 dark:text-white/40 text-sm font-medium uppercase tracking-[0.2em]">Proudly made by Bihari</p>
-            <p className="text-red-600 dark:text-red-500 text-xs font-bold uppercase tracking-[0.3em]">Developed by AYUSH</p>
+            <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em]">Proudly made by Bihari</p>
+            <p className="text-red-500 text-xs font-bold uppercase tracking-[0.3em]">Developed by AYUSH</p>
           </div>
           
-          <div className="flex items-center gap-6 text-black/30 dark:text-white/30 text-xs uppercase tracking-widest font-bold">
+          <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
             <a href="#" className="hover:text-red-600 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-red-600 transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-red-600 transition-colors">Contact Us</a>
           </div>
           
-          <p className="text-black/10 dark:text-white/10 text-[10px] uppercase tracking-[0.3em] mt-4">
+          <p className="text-white/10 text-[10px] uppercase tracking-[0.3em] mt-4">
             © 2026 Movie Wallah. All rights reserved.
           </p>
         </div>
@@ -623,50 +623,50 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {showAdminLogin && (
-          <motion.div key="admin-login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/80 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-sm glass-panel rounded-3xl p-8 relative bg-white dark:bg-white/10">
+          <motion.div key="admin-login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-sm glass-panel rounded-3xl p-8 relative bg-white/10">
               <button onClick={() => setShowAdminLogin(false)} className="absolute top-4 right-4 text-current opacity-50 hover:opacity-100 bg-current/10 rounded-full p-1 transition-colors"><X size={20} /></button>
               <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-full bg-current/10 flex items-center justify-center"><Shield size={32} className="text-current" /></div></div>
               <h3 className="text-2xl font-bold text-center mb-2">Admin Access</h3>
               <p className="text-current opacity-50 text-center text-sm mb-6">Enter your password to manage movies.</p>
               <form onSubmit={handleAdminLogin}>
-                <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Password" className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current placeholder-current/30 focus:outline-none focus:ring-2 focus:ring-current/50 transition-all mb-4" autoFocus />
+                <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Password" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current placeholder-current/30 focus:outline-none focus:ring-2 focus:ring-current/50 transition-all mb-4" autoFocus />
                 {errorMsg && <p className="text-red-400 text-xs mb-4 text-center">{errorMsg}</p>}
-                <button type="submit" className="w-full bg-black dark:bg-white text-white dark:text-black font-bold rounded-xl py-3 hover:opacity-90 transition-opacity">Unlock</button>
+                <button type="submit" className="w-full bg-white text-black font-bold rounded-xl py-3 hover:opacity-90 transition-opacity">Unlock</button>
               </form>
             </motion.div>
           </motion.div>
         )}
 
         {showAddEditModal && (
-          <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/80 backdrop-blur-xl overflow-y-auto">
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 relative my-8 bg-white dark:bg-white/10">
+          <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 relative my-8 bg-white/10">
               <button onClick={() => setShowAddEditModal(false)} className="absolute top-6 right-6 text-current opacity-50 hover:opacity-100 bg-current/10 rounded-full p-1 transition-colors"><X size={20} /></button>
               <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-current">{editingMovie ? <Edit size={24} /> : <Plus size={24} />} {editingMovie ? 'Edit Movie' : 'Add New Movie'}</h3>
-              {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl mb-6 text-sm">{errorMsg}</div>}
+              {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm">{errorMsg}</div>}
               <form onSubmit={handleSaveMovie} className="space-y-4">
-                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Movie Title *</label><input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. Inception" /></div>
+                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Movie Title *</label><input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. Inception" /></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Download URL *</label><input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Watch URL (Optional)</label><input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
+                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Download URL *</label><input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
+                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Watch URL (Optional)</label><input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
+                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
                 </div>
-                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/5 dark:bg-black/50 border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
-                <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button type="submit" className="flex-1 bg-black dark:bg-white text-white dark:text-black hover:opacity-90 font-bold rounded-xl py-3 transition-opacity">{editingMovie ? 'Save Changes' : 'Add Movie'}</button></div>
+                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
+                <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button type="submit" className="flex-1 bg-white text-black hover:opacity-90 font-bold rounded-xl py-3 transition-opacity">{editingMovie ? 'Save Changes' : 'Add Movie'}</button></div>
               </form>
             </motion.div>
           </motion.div>
         )}
 
         {movieToDelete && (
-          <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/80 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white dark:bg-white/10">
+          <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white/10">
               <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4"><Trash2 size={32} className="text-red-500" /></div>
               <h3 className="text-xl font-bold mb-2 text-current">Delete Movie</h3>
               <p className="text-current opacity-50 mb-6 text-sm">Are you sure you want to delete this movie? This action cannot be undone.</p>
-              <div className="flex gap-3"><button onClick={() => setMovieToDelete(null)} className="flex-1 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 transition-colors">Delete</button></div>
+              <div className="flex gap-3"><button onClick={() => setMovieToDelete(null)} className="flex-1 bg-white/10 hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 transition-colors">Delete</button></div>
             </motion.div>
           </motion.div>
         )}
@@ -684,10 +684,10 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
       transition={{ duration: 0.3 }}
       className="flex flex-col gap-3 group w-full"
     >
-      <div className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
+      <div className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-white/5 shadow-xl ring-1 ring-white/10 group-hover:ring-white/30 transition-all">
         {/* Skeleton Loader */}
         {!isImageLoaded && (
-          <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse flex items-center justify-center">
+          <div className="absolute inset-0 bg-zinc-800 animate-pulse flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-current opacity-10 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
@@ -720,7 +720,7 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => onView(movie.id)}
-                className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
+                className="flex-1 bg-white text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
               >
                 <Play size={14} className="fill-current" /> Watch
               </a>
@@ -730,15 +730,15 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
               target="_blank" 
               rel="noopener noreferrer" 
               onClick={() => onDownload(movie.id)}
-              className="flex-1 bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-black/10 dark:hover:bg-white/20 transition-all active:scale-95"
+              className="flex-1 bg-white/10 border border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white/20 transition-all active:scale-95"
             >
               <Download size={14} /> Download
             </a>
           </div>
 
           {isAdmin && (
-            <div className="flex flex-col gap-2 pt-1 border-t border-black/5 dark:border-white/5 mt-1">
-              <div className="flex items-center justify-between px-1 text-[10px] md:text-xs text-black/50 dark:text-white/50 font-medium">
+            <div className="flex flex-col gap-2 pt-1 border-t border-white/5 mt-1">
+              <div className="flex items-center justify-between px-1 text-[10px] md:text-xs text-white/50 font-medium">
                 <span className="flex items-center gap-1"><Eye size={12} /> {movie.views || 0} Views</span>
                 <span className="flex items-center gap-1"><Download size={12} /> {movie.downloads || 0} Downloads</span>
               </div>
