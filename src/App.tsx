@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Moon, Sun, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -15,8 +15,6 @@ interface Movie {
   posterUrl: string;
   description: string;
   created_at?: string;
-  views?: number;
-  downloads?: number;
 }
 
 const INITIAL_MOVIES: Movie[] = [
@@ -323,27 +321,8 @@ export default function App() {
       return;
     }
     setIsLoading(true);
-    try {
-      // Try fetching with views and downloads
-      const { data, error } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at, views, downloads').order('created_at', { ascending: false });
-      
-      if (error) {
-        console.warn('Extended query failed, trying basic query:', error.message);
-        // Fallback to basic query if columns don't exist yet
-        const { data: basicData, error: basicError } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at').order('created_at', { ascending: false });
-        if (!basicError && basicData) {
-          setMovies(basicData);
-        } else if (basicError) {
-          console.error('Basic query also failed:', basicError.message);
-          setErrorMsg('Failed to load movies. Please check your database connection.');
-        }
-      } else if (data) {
-        setMovies(data);
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching movies:', err);
-      setErrorMsg('An unexpected error occurred while loading movies.');
-    }
+    const { data, error } = await supabase.from('movies').select('id, title, url, viewUrl, posterUrl, description, created_at').order('created_at', { ascending: false });
+    if (!error && data) setMovies(data);
     setIsLoading(false);
   };
 
@@ -400,14 +379,14 @@ export default function App() {
     setEditingMovie(null);
   };
 
-  const handleEdit = useCallback((movie: Movie) => {
+  const handleEdit = (movie: Movie) => {
     setEditingMovie(movie);
     setFormData({
       title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
       posterUrl: movie.posterUrl, description: movie.description
     });
     setShowAddEditModal(true);
-  }, []);
+  };
 
   const confirmDelete = async () => {
     if (!movieToDelete) return;
@@ -416,33 +395,9 @@ export default function App() {
     setMovieToDelete(null);
   };
 
-  const handleDownload = useCallback(async (movieId: string) => {
-    // Optimistic UI update for instant, lag-free feedback
-    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: (m.downloads || 0) + 1 } : m));
-    
-    if (!supabase) return;
-    try {
-      const { data: movie } = await supabase.from('movies').select('downloads').eq('id', movieId).single();
-      const currentDownloads = movie?.downloads || 0;
-      await supabase.from('movies').update({ downloads: currentDownloads + 1 }).eq('id', movieId);
-    } catch (err) {
-      console.error('Error tracking download:', err);
-    }
-  }, []);
-
-  const handleView = useCallback(async (movieId: string) => {
-    // Optimistic UI update for instant, lag-free feedback
-    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: (m.views || 0) + 1 } : m));
-    
-    if (!supabase) return;
-    try {
-      const { data: movie } = await supabase.from('movies').select('views').eq('id', movieId).single();
-      const currentViews = movie?.views || 0;
-      await supabase.from('movies').update({ views: currentViews + 1 }).eq('id', movieId);
-    } catch (err) {
-      console.error('Error tracking view:', err);
-    }
-  }, []);
+  const handleDownload = async (movieId: string) => {
+    // Download tracking removed
+  };
 
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
   const featuredMovies = movies.slice(0, 5);
@@ -476,15 +431,16 @@ export default function App() {
           </div>
         ) : (
           <>
-      {featuredMovie && !searchQuery && !isSearchActive && (
+            {/* Hero Section */}
+            {featuredMovie && !searchQuery && !isSearchActive && (
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={featuredMovie.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.05 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
                     className="absolute inset-0"
                   >
                     <img 
@@ -492,22 +448,12 @@ export default function App() {
                       alt={featuredMovie.title} 
                       className="w-full h-full object-cover" 
                       referrerPolicy="no-referrer"
-                      decoding="async"
-                      fetchPriority="high"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
                     
                     <div className="absolute inset-0 flex items-end pb-20 md:pb-32 px-6 md:px-16">
                       <div className="max-w-3xl">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
-                            <Eye size={14} /> {featuredMovie.views || 0}
-                          </div>
-                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
-                            <Download size={14} /> {featuredMovie.downloads || 0}
-                          </div>
-                        </div>
                         <motion.h1 
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -533,13 +479,7 @@ export default function App() {
                           className="flex flex-wrap items-center gap-5"
                         >
                           {featuredMovie.viewUrl && (
-                            <a 
-                              href={featuredMovie.viewUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              onClick={() => handleView(featuredMovie.id)}
-                              className="apple-btn-primary !bg-white !text-black !px-10 !py-4 !text-lg"
-                            >
+                            <a href={featuredMovie.viewUrl} target="_blank" rel="noopener noreferrer" className="apple-btn-primary !bg-white !text-black !px-10 !py-4 !text-lg">
                               <Play size={24} className="fill-current" /> Play Now
                             </a>
                           )}
@@ -586,7 +526,7 @@ export default function App() {
                   {filteredMovies.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                       {filteredMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
                       ))}
                     </div>
                   ) : (
@@ -611,23 +551,14 @@ export default function App() {
                       <Swiper
                         slidesPerView="auto"
                         spaceBetween={24}
-                        freeMode={{
-                          enabled: true,
-                          momentum: true,
-                          momentumRatio: 1.5,
-                          momentumVelocityRatio: 1.5,
-                        }}
-                        mousewheel={{ 
-                          forceToAxis: true,
-                          sensitivity: 2.5,
-                        }}
-                        speed={600}
+                        freeMode={true}
+                        mousewheel={{ forceToAxis: true }}
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -649,15 +580,13 @@ export default function App() {
                     >
                       {movies.map((movie) => (
                         <motion.div
-                          layout
                           key={movie.id}
                           variants={{
                             hidden: { opacity: 0, y: 20 },
                             visible: { opacity: 1, y: 0 }
                           }}
-                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
                         >
-                          <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                          <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} />
                         </motion.div>
                       ))}
                     </motion.div>
@@ -711,7 +640,7 @@ export default function App() {
 
         {showAddEditModal && (
           <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/80 backdrop-blur-xl overflow-y-auto">
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 relative my-8 bg-white dark:bg-white/10">
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 relative my-8 bg-white dark:bg-white/10">
               <button onClick={() => setShowAddEditModal(false)} className="absolute top-6 right-6 text-current opacity-50 hover:opacity-100 bg-current/10 rounded-full p-1 transition-colors"><X size={20} /></button>
               <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-current">{editingMovie ? <Edit size={24} /> : <Plus size={24} />} {editingMovie ? 'Edit Movie' : 'Add New Movie'}</h3>
               {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-600 dark:text-red-200 px-4 py-3 rounded-xl mb-6 text-sm">{errorMsg}</div>}
@@ -733,7 +662,7 @@ export default function App() {
 
         {movieToDelete && (
           <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/80 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white dark:bg-white/10">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white dark:bg-white/10">
               <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4"><Trash2 size={32} className="text-red-500" /></div>
               <h3 className="text-xl font-bold mb-2 text-current">Delete Movie</h3>
               <p className="text-current opacity-50 mb-6 text-sm">Are you sure you want to delete this movie? This action cannot be undone.</p>
@@ -746,52 +675,16 @@ export default function App() {
   );
 }
 
-const MovieCard = React.memo(({ 
-  movie, 
-  isAdmin, 
-  onEdit, 
-  onDelete, 
-  onDownload,
-  onView
-}: { 
-  movie: Movie, 
-  isAdmin: boolean, 
-  onEdit: (m: Movie) => void, 
-  onDelete: (id: string) => void, 
-  onDownload: (id: string) => void,
-  onView: (id: string) => void
-}) => {
+const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void }> = ({ movie, isAdmin, onEdit, onDelete, onDownload }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '300px' }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <motion.div
-      layout
-      whileHover={{ y: -8, scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      style={{ willChange: "transform" }}
+      whileHover={{ y: -5 }}
+      transition={{ duration: 0.3 }}
       className="flex flex-col gap-3 group w-full"
     >
-      <div ref={imgRef} style={{ transform: "translateZ(0)" }} className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
+      <div className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-black/5 dark:bg-white/5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 group-hover:ring-black/10 dark:group-hover:ring-white/30 transition-all">
         {/* Skeleton Loader */}
         {!isImageLoaded && (
           <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse flex items-center justify-center">
@@ -799,27 +692,16 @@ const MovieCard = React.memo(({
           </div>
         )}
         
-        {isInView && (
-          <img 
-            src={movie.posterUrl} 
-            alt={movie.title} 
-            onLoad={() => setIsImageLoaded(true)}
-            className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105 ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`} 
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            decoding="async"
-          />
-        )}
+        <img 
+          src={movie.posterUrl} 
+          alt={movie.title} 
+          onLoad={() => setIsImageLoaded(true)}
+          className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`} 
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
         
-        {/* Stats Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
-            <Eye size={10} /> {movie.views || 0}
-          </div>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
-            <Download size={10} /> {movie.downloads || 0}
-          </div>
-        </div>
+        {/* Rating & Views Badges removed */}
 
         {/* Subtle overlay on hover */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -837,7 +719,6 @@ const MovieCard = React.memo(({
                 href={movie.viewUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                onClick={() => onView(movie.id)}
                 className="flex-1 bg-black dark:bg-white text-white dark:text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
               >
                 <Play size={14} className="fill-current" /> Watch
@@ -874,4 +755,4 @@ const MovieCard = React.memo(({
       </div>
     </motion.div>
   );
-});
+};
