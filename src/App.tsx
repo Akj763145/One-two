@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Moon, Sun, Settings } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel } from 'swiper/modules';
@@ -101,11 +101,9 @@ const Navbar: React.FC<{
   searchQuery: string,
   setSearchQuery: (q: string) => void,
   onAddClick: () => void,
-  isDark: boolean,
-  toggleTheme: () => void,
   isSearchActive: boolean,
   setIsSearchActive: (active: boolean) => void
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isDark, toggleTheme, isSearchActive, setIsSearchActive }) => {
+}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -232,18 +230,8 @@ const Navbar: React.FC<{
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     className="absolute right-0 mt-3 w-56 glass-panel rounded-2xl p-2 shadow-2xl overflow-hidden"
                   >
-                  <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">Settings</div>
-                    <button 
-                      onClick={() => { toggleTheme(); setShowMenu(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-medium"
-                    >
-                      {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                      {isDark ? 'Light Mode' : 'Dark Mode'}
-                    </button>
-                    
                     {!isAdmin && (
                       <>
-                        <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
                         <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">Account</div>
                         <button 
                           onClick={() => { onAdminClick(); setShowMenu(false); }}
@@ -266,7 +254,6 @@ const Navbar: React.FC<{
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
-  const [isDark, setIsDark] = useState(true);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -287,29 +274,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Initialize theme
-    const savedTheme = localStorage.getItem('movieWallah_theme');
-    if (savedTheme === 'light') {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    } else {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
+    // Force dark mode
+    document.documentElement.classList.add('dark');
     fetchMovies();
   }, []);
-
-  const toggleTheme = () => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('movieWallah_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('movieWallah_theme', 'light');
-    }
-  };
 
   useEffect(() => {
     if (!supabase) {
@@ -439,7 +407,7 @@ export default function App() {
   const trendingMovies = movies.slice(0, 10);
 
   return (
-    <div className={`min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
       <AnimatePresence>
         {/* Welcome animation removed */}
       </AnimatePresence>
@@ -452,8 +420,6 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' }); setShowAddEditModal(true); }}
-        isDark={isDark}
-        toggleTheme={toggleTheme}
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
       />
