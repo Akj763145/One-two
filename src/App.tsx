@@ -580,7 +580,15 @@ export default function App() {
                     <div className="mb-12">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl md:text-2xl font-bold tracking-tight">Trending Now</h2>
-                        <button className="text-sm font-medium text-white/50 hover:text-white flex items-center transition-colors">
+                        <button 
+                          onClick={() => {
+                            const element = document.getElementById('watch-next');
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }}
+                          className="text-sm font-medium text-white/50 hover:text-white flex items-center transition-colors"
+                        >
                           See All <ChevronRight size={16} />
                         </button>
                       </div>
@@ -607,7 +615,7 @@ export default function App() {
                   </div>
 
                   {/* All Movies Grid */}
-                  <div className="mb-12">
+                  <div id="watch-next" className="mb-12 scroll-mt-24">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl md:text-2xl font-bold tracking-tight">Watch Next</h2>
                     </div>
