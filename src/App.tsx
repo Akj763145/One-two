@@ -19,6 +19,7 @@ interface Movie {
   created_at?: string;
   downloads?: number;
   views?: number;
+  is_hero?: boolean;
 }
 
 const INITIAL_MOVIES: Movie[] = [
@@ -291,7 +292,7 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: ''
+    title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false
   });
 
   useEffect(() => {
@@ -368,7 +369,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false });
     setEditingMovie(null);
   };
 
@@ -376,7 +377,8 @@ export default function App() {
     setEditingMovie(movie);
     setFormData({
       title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
-      posterUrl: movie.posterUrl, description: movie.description
+      posterUrl: movie.posterUrl, description: movie.description,
+      is_hero: movie.is_hero || false
     });
     setShowAddEditModal(true);
   };
@@ -423,7 +425,8 @@ export default function App() {
   };
 
   const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  const featuredMovies = movies.slice(0, 5);
+  const heroMovies = movies.filter(m => m.is_hero);
+  const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
   const featuredMovie = featuredMovies[currentHeroIndex] || null;
   const trendingMovies = movies.slice(0, 10);
 
@@ -440,7 +443,7 @@ export default function App() {
         onLogout={() => setIsAdmin(false)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' }); setShowAddEditModal(true); }}
+        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
         movies={movies}
@@ -706,6 +709,20 @@ export default function App() {
                   <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
                 </div>
                 <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
+                
+                <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <input 
+                    type="checkbox" 
+                    id="is_hero"
+                    checked={formData.is_hero}
+                    onChange={(e) => setFormData({...formData, is_hero: e.target.checked})}
+                    className="w-5 h-5 rounded border-white/20 bg-black/50 text-red-600 focus:ring-red-500/50 transition-all cursor-pointer"
+                  />
+                  <label htmlFor="is_hero" className="text-sm font-medium text-current cursor-pointer select-none">
+                    Show in Hero Section (Featured)
+                  </label>
+                </div>
+
                 <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button type="submit" className="flex-1 bg-white text-black hover:opacity-90 font-bold rounded-xl py-3 transition-opacity">{editingMovie ? 'Save Changes' : 'Add Movie'}</button></div>
               </form>
             </motion.div>
