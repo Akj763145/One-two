@@ -104,8 +104,9 @@ const Navbar: React.FC<{
   setSearchQuery: (q: string) => void,
   onAddClick: () => void,
   isSearchActive: boolean,
-  setIsSearchActive: (active: boolean) => void
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive }) => {
+  setIsSearchActive: (active: boolean) => void,
+  movies: Movie[]
+}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -180,6 +181,24 @@ const Navbar: React.FC<{
                       className="absolute right-0 mt-3 w-56 bg-zinc-900 text-white rounded-2xl p-2 shadow-2xl border border-white/10 overflow-hidden"
                     >
                       <div className="px-4 py-2 text-[10px] font-bold text-white/30 uppercase tracking-widest">Admin Control</div>
+                      
+                      {/* Total Stats */}
+                      <div className="mx-2 mb-2 bg-white/5 rounded-xl border border-white/10 p-3 flex justify-between items-center">
+                        <div className="flex flex-col items-center flex-1">
+                          <span className="text-[10px] text-white/50 flex items-center gap-1 uppercase tracking-wider font-bold mb-1"><Eye size={10} /> Views</span>
+                          <span className="font-bold text-lg leading-none text-blue-400">
+                            {movies.reduce((sum, m) => sum + (m.views || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10 mx-2"></div>
+                        <div className="flex flex-col items-center flex-1">
+                          <span className="text-[10px] text-white/50 flex items-center gap-1 uppercase tracking-wider font-bold mb-1"><Download size={10} /> Dls</span>
+                          <span className="font-bold text-lg leading-none text-emerald-400">
+                            {movies.reduce((sum, m) => sum + (m.downloads || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
                       <button 
                         onClick={() => { onAddClick(); setShowAdminMenu(false); }}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
@@ -424,6 +443,7 @@ export default function App() {
         onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '' }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
+        movies={movies}
       />
       
       <main className="pt-20 md:pt-24 pb-24">

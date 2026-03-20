@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advertisement</title>
+    <style>
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: transparent; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <script type="text/javascript">
+        const urlParams = new URLSearchParams(window.location.search);
+        const key = urlParams.get('key') || 'YOUR_ADSTERRA_KEY';
+        const width = parseInt(urlParams.get('width') || '728');
+        const height = parseInt(urlParams.get('height') || '90');
+
+        if (key !== 'YOUR_ADSTERRA_KEY') {
+            window.atOptions = {
+                'key' : key,
+                'format' : 'iframe',
+                'height' : height,
+                'width' : width,
+                'params' : {}
+            };
+            document.write('<scr' + 'ipt type="text/javascript" src="https://www.highperformanceformat.com/' + key + '/invoke.js"></scr' + 'ipt>');
+        } else {
+            document.write('<span style="color: rgba(255,255,255,0.5); font-family: system-ui, sans-serif; font-size: 14px;">Adsterra Ad Placeholder</span>');
+        }
+    </script>
+</body>
+</html>
