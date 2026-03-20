@@ -1,0 +1,16 @@
+{
+  "name": "Movie Wallah",
+  "short_name": "MovieWallah",
+  "description": "Download any movie here. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ff0000",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
