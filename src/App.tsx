@@ -788,6 +788,9 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
         <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity">
           {movie.title}
         </h3>
+        <p className="text-white/50 text-[10px] md:text-xs line-clamp-2 leading-relaxed">
+          {movie.description}
+        </p>
         
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
