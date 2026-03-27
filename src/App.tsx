@@ -22,6 +22,15 @@ interface Movie {
   is_hero?: boolean;
 }
 
+interface Review {
+  id: string;
+  movie_id: string;
+  user_name: string;
+  rating: number;
+  text: string;
+  created_at?: string;
+}
+
 const INITIAL_MOVIES: Movie[] = [
   {
     id: '1',
@@ -289,6 +298,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [selectedMovieForReviews, setSelectedMovieForReviews] = useState<Movie | null>(null);
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
@@ -553,7 +563,7 @@ export default function App() {
                       {filteredMovies.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                           {filteredMovies.map(movie => (
-                            <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                            <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowReviews={setSelectedMovieForReviews} />
                           ))}
                         </div>
                       ) : (
@@ -602,7 +612,7 @@ export default function App() {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowReviews={setSelectedMovieForReviews} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -636,7 +646,7 @@ export default function App() {
                               visible: { opacity: 1, y: 0 }
                             }}
                           >
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowReviews={setSelectedMovieForReviews} />
                           </motion.div>
                         ))}
                       </motion.div>
@@ -737,6 +747,10 @@ export default function App() {
           </motion.div>
         )}
 
+        {selectedMovieForReviews && (
+          <ReviewsModal key="reviews-modal" movie={selectedMovieForReviews} onClose={() => setSelectedMovieForReviews(null)} />
+        )}
+
         {movieToDelete && (
           <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white/10">
@@ -752,7 +766,7 @@ export default function App() {
   );
 }
 
-const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void, onView: (id: string) => void }> = ({ movie, isAdmin, onEdit, onDelete, onDownload, onView }) => {
+const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void, onView: (id: string) => void, onShowReviews: (m: Movie) => void }> = ({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowReviews }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   return (
@@ -815,6 +829,13 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
               <Download size={14} /> Download
             </a>
           </div>
+          
+          <button 
+            onClick={() => onShowReviews(movie)}
+            className="w-full bg-white/5 hover:bg-white/10 text-white/80 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+          >
+            <Star size={14} className="text-yellow-500" /> Reviews & Ratings
+          </button>
 
           {isAdmin && (
             <div className="flex flex-col gap-2 pt-1 border-t border-white/5 mt-1">
@@ -840,6 +861,171 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
           )}
         </div>
       </div>
+    </motion.div>
+  );
+};
+
+const ReviewsModal: React.FC<{ movie: Movie; onClose: () => void }> = ({ movie, onClose }) => {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('');
+  const [rating, setRating] = useState(5);
+  const [text, setText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [movie.id]);
+
+  const fetchReviews = async () => {
+    setIsLoading(true);
+    if (supabase) {
+      const { data } = await supabase.from('reviews').select('*').eq('movie_id', movie.id).order('created_at', { ascending: false });
+      if (data) setReviews(data);
+    } else {
+      const saved = localStorage.getItem(`reviews_${movie.id}`);
+      if (saved) setReviews(JSON.parse(saved));
+    }
+    setIsLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim() || !text.trim()) return;
+    setIsSubmitting(true);
+    
+    const newReview: Review = {
+      id: Date.now().toString(),
+      movie_id: movie.id,
+      user_name: userName,
+      rating,
+      text,
+      created_at: new Date().toISOString()
+    };
+
+    if (supabase) {
+      await supabase.from('reviews').insert([newReview]);
+      fetchReviews();
+    } else {
+      const updated = [newReview, ...reviews];
+      setReviews(updated);
+      localStorage.setItem(`reviews_${movie.id}`, JSON.stringify(updated));
+    }
+    
+    setUserName('');
+    setRating(5);
+    setText('');
+    setIsSubmitting(false);
+  };
+
+  const avgRating = reviews.length > 0 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+    : '0.0';
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }} 
+        exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+        className="w-full max-w-2xl glass-panel rounded-3xl p-6 bg-zinc-900/90 border border-white/10 my-8 flex flex-col max-h-[90vh]"
+      >
+        <div className="flex justify-between items-center mb-6 shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold">{movie.title}</h2>
+            <div className="flex items-center gap-2 text-white/60 mt-1">
+              <Star size={16} className="text-yellow-500 fill-yellow-500" />
+              <span className="font-bold text-white">{avgRating}</span>
+              <span>({reviews.length} reviews)</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-6">
+          {/* Review Form */}
+          <form onSubmit={handleSubmit} className="bg-white/5 rounded-2xl p-4 border border-white/10 shrink-0">
+            <h3 className="font-bold mb-4">Write a Review</h3>
+            <div className="flex flex-col gap-4">
+              <input 
+                type="text" 
+                placeholder="Your Name" 
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-white/30 transition-colors"
+                required
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-white/60">Rating:</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="p-1 hover:scale-110 transition-transform"
+                    >
+                      <Star size={24} className={star <= rating ? "text-yellow-500 fill-yellow-500" : "text-white/20"} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <textarea 
+                placeholder="What did you think about the movie?" 
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-white/30 transition-colors min-h-[100px] resize-none"
+                required
+              />
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-white text-black font-bold py-3 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </form>
+
+          {/* Reviews List */}
+          <div className="flex flex-col gap-4">
+            <h3 className="font-bold">User Reviews</h3>
+            {isLoading ? (
+              <div className="text-center py-8 text-white/50">Loading reviews...</div>
+            ) : reviews.length > 0 ? (
+              reviews.map((review) => (
+                <div key={review.id} className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-bold">{review.user_name}</span>
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={14} className={i < review.rating ? "text-yellow-500 fill-yellow-500" : "text-white/20"} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-white/80 text-sm leading-relaxed">{review.text}</p>
+                  {review.created_at && (
+                    <span className="text-[10px] text-white/40 mt-2 block">
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-white/50 bg-white/5 rounded-2xl border border-white/5">
+                No reviews yet. Be the first to review!
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 };
