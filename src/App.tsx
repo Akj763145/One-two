@@ -115,8 +115,9 @@ const Navbar: React.FC<{
   onAddClick: () => void,
   isSearchActive: boolean,
   setIsSearchActive: (active: boolean) => void,
-  movies: Movie[]
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies }) => {
+  movies: Movie[],
+  onDMCAClick: () => void
+}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -272,6 +273,13 @@ const Navbar: React.FC<{
                         </button>
                       </>
                     )}
+                    <div className="h-px bg-white/10 my-1" />
+                    <button 
+                      onClick={() => { onDMCAClick(); setShowMenu(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-red-400"
+                    >
+                      <Shield size={18} /> DMCA Policy
+                    </button>
                   </motion.div>
                 </>
               )}
@@ -299,6 +307,7 @@ export default function App() {
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [selectedMovieForReviews, setSelectedMovieForReviews] = useState<Movie | null>(null);
+  const [showDMCA, setShowDMCA] = useState(false);
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
@@ -457,6 +466,7 @@ export default function App() {
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
         movies={movies}
+        onDMCAClick={() => setShowDMCA(true)}
       />
       
       <main className="pt-20 md:pt-24 pb-24">
@@ -684,6 +694,7 @@ export default function App() {
           <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
             <a href="#" className="hover:text-red-600 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-red-600 transition-colors">Terms of Service</a>
+            <button onClick={() => setShowDMCA(true)} className="hover:text-red-600 transition-colors uppercase">DMCA Policy</button>
             <a href="#" className="hover:text-red-600 transition-colors">Contact Us</a>
           </div>
           
@@ -695,6 +706,9 @@ export default function App() {
 
       {/* Modals */}
       <AnimatePresence>
+        {showDMCA && (
+          <DMCAModal key="dmca-modal" onClose={() => setShowDMCA(false)} />
+        )}
         {showAdminLogin && (
           <motion.div key="admin-login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-sm glass-panel rounded-3xl p-8 relative bg-white/10">
@@ -1024,6 +1038,68 @@ const ReviewsModal: React.FC<{ movie: Movie; onClose: () => void }> = ({ movie, 
               </div>
             )}
           </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const DMCAModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }} 
+        exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+        className="w-full max-w-3xl glass-panel rounded-3xl p-6 md:p-10 bg-zinc-900/90 border border-white/10 my-8 flex flex-col max-h-[90vh]"
+      >
+        <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/10 pb-4">
+          <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+            <Shield className="text-red-500" size={32} />
+            DMCA / Copyright Policy
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar flex flex-col gap-6 text-white/80 leading-relaxed">
+          <p>
+            Movie Wallah respects the intellectual property rights of others and expects its users to do the same. In accordance with the Digital Millennium Copyright Act of 1998, the text of which may be found on the U.S. Copyright Office website at <a href="http://www.copyright.gov/legislation/dmca.pdf" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 underline">http://www.copyright.gov/legislation/dmca.pdf</a>, we will respond expeditiously to claims of copyright infringement committed using the Movie Wallah service that are reported to our Designated Copyright Agent.
+          </p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Takedown Request Process</h3>
+          <p>
+            If you are a copyright owner, or are authorized to act on behalf of one, or authorized to act under any exclusive right under copyright, please report alleged copyright infringements taking place on or through the Site by completing the following DMCA Notice of Alleged Infringement and delivering it to our Designated Copyright Agent. Upon receipt of the Notice as described below, we will take whatever action, in our sole discretion, we deem appropriate, including removal of the challenged material from the Site.
+          </p>
+
+          <h3 className="text-xl font-bold text-white mt-4">DMCA Notice of Alleged Infringement ("Notice")</h3>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>Identify the copyrighted work that you claim has been infringed, or - if multiple copyrighted works are covered by this Notice - you may provide a representative list of the copyrighted works that you claim have been infringed.</li>
+            <li>Identify the material that you claim is infringing (or to be the subject of infringing activity) and that is to be removed or access to which is to be disabled, and information reasonably sufficient to permit us to locate the material, including at a minimum, if applicable, the URL of the link shown on the Site where such material may be found.</li>
+            <li>Provide your mailing address, telephone number, and, if available, email address.</li>
+            <li>Include both of the following statements in the body of the Notice:
+              <ul className="list-[circle] pl-6 mt-2 space-y-2 text-white/60">
+                <li>"I hereby state that I have a good faith belief that the disputed use of the copyrighted material is not authorized by the copyright owner, its agent, or the law (e.g., as a fair use)."</li>
+                <li>"I hereby state that the information in this Notice is accurate and, under penalty of perjury, that I am the owner, or authorized to act on behalf of the owner, of the copyright or of an exclusive right under the copyright that is allegedly infringed."</li>
+              </ul>
+            </li>
+            <li>Provide your full legal name and your electronic or physical signature.</li>
+          </ul>
+
+          <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4">
+            <h4 className="font-bold text-white mb-2">Deliver this Notice, with all items completed, to:</h4>
+            <p className="font-mono text-red-400">moviewallah.online@gmail.com</p>
+          </div>
+          
+          <p className="text-sm text-white/50 mt-4">
+            Please note that under Section 512(f) of the DMCA, any person who knowingly materially misrepresents that material or activity is infringing may be subject to liability.
+          </p>
         </div>
       </motion.div>
     </motion.div>
