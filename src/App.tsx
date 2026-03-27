@@ -16,6 +16,7 @@ interface Movie {
   viewUrl?: string;
   posterUrl: string;
   description: string;
+  category?: string;
   created_at?: string;
   downloads?: number;
   views?: number;
@@ -39,10 +40,13 @@ const INITIAL_MOVIES: Movie[] = [
     viewUrl: '#',
     posterUrl: 'https://picsum.photos/seed/raja/600/900',
     description: 'Download now',
+    category: 'Action',
     downloads: 0,
     views: 0
   }
 ];
+
+const CATEGORIES = ['All', 'Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Documentary', 'Animation', 'Other'];
 
 const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   return (
@@ -308,10 +312,11 @@ export default function App() {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [selectedMovieForReviews, setSelectedMovieForReviews] = useState<Movie | null>(null);
   const [showDMCA, setShowDMCA] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false
+    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false
   });
 
   useEffect(() => {
@@ -388,7 +393,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false });
     setEditingMovie(null);
   };
 
@@ -397,6 +402,7 @@ export default function App() {
     setFormData({
       title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
       posterUrl: movie.posterUrl, description: movie.description,
+      category: movie.category || 'Other',
       is_hero: movie.is_hero || false
     });
     setShowAddEditModal(true);
@@ -443,7 +449,11 @@ export default function App() {
     }
   };
 
-  const filteredMovies = movies.filter(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredMovies = movies.filter(m => {
+    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === 'All' || m.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
   const heroMovies = movies.filter(m => m.is_hero);
   const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
   const featuredMovie = featuredMovies[currentHeroIndex] || null;
@@ -462,7 +472,7 @@ export default function App() {
         onLogout={() => setIsAdmin(false)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', is_hero: false }); setShowAddEditModal(true); }}
+        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
         movies={movies}
@@ -477,7 +487,7 @@ export default function App() {
         ) : (
           <>
             {/* Hero Section */}
-            {featuredMovie && !searchQuery && !isSearchActive && (
+            {featuredMovie && !searchQuery && !isSearchActive && activeCategory === 'All' && (
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden">
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -503,9 +513,14 @@ export default function App() {
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-                          className="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tighter text-shadow-xl"
+                          className="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tighter text-shadow-xl flex items-center gap-4 flex-wrap"
                         >
                           {featuredMovie.title}
+                          {featuredMovie.category && (
+                            <span className="text-sm md:text-base font-bold uppercase tracking-widest bg-red-600/80 backdrop-blur-md text-white px-3 py-1 rounded-full border border-red-500/50">
+                              {featuredMovie.category}
+                            </span>
+                          )}
                         </motion.h1>
                         
                         <motion.p 
@@ -562,11 +577,35 @@ export default function App() {
             )}
 
             {/* Search Results or Rows */}
-            <div className={`px-6 md:px-16 ${searchQuery || !featuredMovie ? 'pt-12' : 'mt-12 relative z-20'}`}>
-              {searchQuery ? (
+            <div className={`px-6 md:px-16 ${searchQuery || !featuredMovie || activeCategory !== 'All' ? 'pt-12' : 'mt-12 relative z-20'}`}>
+              
+              {/* Category Filter */}
+              <div className="mb-8 overflow-x-auto custom-scrollbar pb-2">
+                <div className="flex items-center gap-3">
+                  {CATEGORIES.map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveCategory(category)}
+                      className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        activeCategory === category 
+                          ? 'bg-white text-black' 
+                          : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white border border-white/10'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {searchQuery || activeCategory !== 'All' ? (
                 <div className="mb-12">
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    Search Results <span className="text-white/50 font-normal text-lg">for "{searchQuery}"</span>
+                    {searchQuery ? (
+                      <>Search Results <span className="text-white/50 font-normal text-lg">for "{searchQuery}"</span></>
+                    ) : (
+                      <>{activeCategory} Movies</>
+                    )}
                   </h2>
                   <div className="flex flex-col lg:flex-row gap-8">
                     <div className="flex-1">
@@ -739,6 +778,19 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
+                  <div>
+                    <label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Category *</label>
+                    <select 
+                      required 
+                      value={formData.category} 
+                      onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all appearance-none"
+                    >
+                      {CATEGORIES.filter(c => c !== 'All').map(category => (
+                        <option key={category} value={category} className="bg-zinc-900 text-white">{category}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
                 
@@ -813,9 +865,16 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
       </div>
 
       <div className="flex flex-col gap-2.5 px-1">
-        <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity">
-          {movie.title}
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity truncate">
+            {movie.title}
+          </h3>
+          {movie.category && (
+            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 px-2 py-0.5 rounded-full whitespace-nowrap">
+              {movie.category}
+            </span>
+          )}
+        </div>
         <p className="text-white/50 text-[10px] md:text-xs line-clamp-2 leading-relaxed">
           {movie.description}
         </p>

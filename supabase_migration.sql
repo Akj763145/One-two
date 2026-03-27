@@ -1,0 +1,1 @@
+ALTER TABLE movies ADD COLUMN category TEXT DEFAULT 'Other';
