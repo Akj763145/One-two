@@ -120,8 +120,10 @@ const Navbar: React.FC<{
   isSearchActive: boolean,
   setIsSearchActive: (active: boolean) => void,
   movies: Movie[],
-  onDMCAClick: () => void
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick }) => {
+  onDMCAClick: () => void,
+  adminView: 'all' | 'featured',
+  setAdminView: (view: 'all' | 'featured') => void
+}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -221,14 +223,14 @@ const Navbar: React.FC<{
                         <Plus size={18} className="text-emerald-400" /> Add New Movie
                       </button>
                       <button 
-                        onClick={() => setShowAdminMenu(false)}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium opacity-50 cursor-not-allowed"
+                        onClick={() => { setAdminView('all'); setShowAdminMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium ${adminView === 'all' ? 'bg-white/10 text-white' : 'text-white/70'}`}
                       >
                         <Shield size={18} className="text-blue-400" /> Admin Dashboard
                       </button>
                       <button 
-                        onClick={() => setShowAdminMenu(false)}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium opacity-50 cursor-not-allowed"
+                        onClick={() => { setAdminView('featured'); setShowAdminMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm font-medium ${adminView === 'featured' ? 'bg-white/10 text-white' : 'text-white/70'}`}
                       >
                         <Star size={18} className="text-yellow-400" /> Featured Content
                       </button>
@@ -313,6 +315,7 @@ export default function App() {
   const [selectedMovieForReviews, setSelectedMovieForReviews] = useState<Movie | null>(null);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [adminView, setAdminView] = useState<'all' | 'featured'>('all');
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
@@ -471,7 +474,7 @@ export default function App() {
       <Navbar 
         isAdmin={isAdmin} 
         onAdminClick={() => setShowAdminLogin(true)} 
-        onLogout={() => setIsAdmin(false)}
+        onLogout={() => { setIsAdmin(false); setAdminView('all'); }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false }); setShowAddEditModal(true); }}
@@ -479,12 +482,40 @@ export default function App() {
         setIsSearchActive={setIsSearchActive}
         movies={movies}
         onDMCAClick={() => setShowDMCA(true)}
+        adminView={adminView}
+        setAdminView={setAdminView}
       />
       
       <main className="pt-20 md:pt-24 pb-24">
         {isLoading ? (
           <div className="h-screen flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : isAdmin && adminView === 'featured' ? (
+          <div className="px-6 md:px-16 pt-12">
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                <Star className="text-yellow-500" /> Featured Content (Hero Section)
+              </h2>
+              <p className="text-white/50 mb-8">These movies are currently featured in the Hero section on the homepage.</p>
+              <div className="flex flex-col lg:flex-row gap-8">
+                <div className="flex-1">
+                  {heroMovies.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                      {heroMovies.map(movie => (
+                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowReviews={setSelectedMovieForReviews} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
+                      <Star size={48} className="mx-auto mb-4 text-white/20" />
+                      <h3 className="text-xl font-bold mb-2">No Featured Movies</h3>
+                      <p className="text-white/50">Edit a movie and check "Show in Hero Section" to feature it.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -497,14 +528,14 @@ export default function App() {
                     <img key={`preload-${m.id}`} src={m.posterUrl} decoding="async" alt="preload" />
                   ))}
                 </div>
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   <motion.div
                     key={featuredMovie.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.2, ease: "easeInOut" }}
-                    className="absolute inset-0"
+                    initial={{ clipPath: 'circle(0% at 50% 50%)', zIndex: 10 }}
+                    animate={{ clipPath: 'circle(150% at 50% 50%)', zIndex: 10 }}
+                    exit={{ opacity: 0.8, zIndex: 0 }}
+                    transition={{ duration: 1.5, ease: [0.76, 0, 0.24, 1] }}
+                    className="absolute inset-0 bg-black"
                   >
                     <motion.img 
                       src={featuredMovie.posterUrl} 
@@ -513,7 +544,7 @@ export default function App() {
                       referrerPolicy="no-referrer"
                       fetchPriority="high"
                       decoding="async"
-                      initial={{ scale: 1.05 }}
+                      initial={{ scale: 1.1 }}
                       animate={{ scale: 1 }}
                       transition={{ duration: 6, ease: "easeOut" }}
                     />
