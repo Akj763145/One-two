@@ -345,12 +345,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (movies.length <= 1) return;
+    const heroMovies = movies.filter(m => m.is_hero);
+    const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
+    if (featuredMovies.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % Math.min(movies.length, 5));
-    }, 5000);
+      setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
+    }, 6000);
     return () => clearInterval(interval);
-  }, [movies.length]);
+  }, [movies]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -489,20 +491,31 @@ export default function App() {
             {/* Hero Section */}
             {featuredMovie && !searchQuery && !isSearchActive && activeCategory === 'All' && (
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden">
-                <AnimatePresence mode="wait">
+                {/* Preload hero images */}
+                <div className="absolute w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
+                  {featuredMovies.map(m => (
+                    <img key={`preload-${m.id}`} src={m.posterUrl} decoding="async" alt="preload" />
+                  ))}
+                </div>
+                <AnimatePresence>
                   <motion.div
                     key={featuredMovie.id}
-                    initial={{ opacity: 0, x: 100 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -100 }}
-                    transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.2, ease: "easeInOut" }}
                     className="absolute inset-0"
                   >
-                    <img 
+                    <motion.img 
                       src={featuredMovie.posterUrl} 
                       alt={featuredMovie.title} 
                       className="w-full h-full object-cover" 
                       referrerPolicy="no-referrer"
+                      fetchPriority="high"
+                      decoding="async"
+                      initial={{ scale: 1.05 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 6, ease: "easeOut" }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
