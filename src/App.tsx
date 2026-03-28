@@ -353,7 +353,7 @@ export default function App() {
     if (featuredMovies.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
-    }, 6000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [movies]);
 
@@ -546,7 +546,7 @@ export default function App() {
                       decoding="async"
                       initial={{ scale: 1.1 }}
                       animate={{ scale: 1 }}
-                      transition={{ duration: 6, ease: "easeOut" }}
+                      transition={{ duration: 3, ease: "easeOut" }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
