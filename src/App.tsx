@@ -25,6 +25,11 @@ interface Movie {
   downloads?: number;
   views?: number;
   is_hero?: boolean;
+  release_year?: string;
+  maturity_rating?: string;
+  duration?: string;
+  quality?: string;
+  match_score?: number;
 }
 
 interface Review {
@@ -323,7 +328,8 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: ''
+    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '',
+    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
   });
 
   useEffect(() => {
@@ -436,7 +442,7 @@ export default function App() {
         if (error) return setErrorMsg('Error updating movie: ' + error.message);
         setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
       } else {
-        const { data, error } = await supabase.from('movies').insert([{ ...movieData, downloads: 0, views: 0 }]).select('*');
+        const { data, error } = await supabase.from('movies').insert([movieData]).select('*');
         if (error) return setErrorMsg('Error adding movie: ' + error.message);
         if (data && data.length > 0) setMovies([...data, ...movies]);
         else {
@@ -447,7 +453,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '' });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
     setEditingMovie(null);
   };
 
@@ -459,7 +465,14 @@ export default function App() {
       category: movie.category || 'Other',
       is_hero: movie.is_hero || false,
       director: movie.director || '',
-      cast: movie.cast || ''
+      cast: movie.cast || '',
+      release_year: movie.release_year || '',
+      maturity_rating: movie.maturity_rating || '18+',
+      duration: movie.duration || '',
+      quality: movie.quality || 'HD',
+      match_score: movie.match_score || 98,
+      downloads: movie.downloads || 0,
+      views: movie.views || 0
     });
     setShowAddEditModal(true);
   };
@@ -530,7 +543,7 @@ export default function App() {
         onLogout={() => { setIsAdmin(false); setAdminView('all'); }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '' }); setShowAddEditModal(true); }}
+        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
         setIsSearchActive={setIsSearchActive}
         movies={movies}
@@ -853,7 +866,7 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0, y: 20 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.95, opacity: 0, y: 20 }} 
-              className="w-full max-w-2xl min-h-screen md:min-h-0 md:rounded-3xl p-6 md:p-10 relative bg-zinc-900 border-x-0 md:border border-white/10 flex flex-col"
+              className="w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] md:rounded-3xl p-6 md:p-10 relative bg-zinc-900 border-x-0 md:border border-white/10 flex flex-col"
             >
               <div className="flex justify-between items-center mb-8 shrink-0">
                 <h3 className="text-2xl font-bold flex items-center gap-3 text-current">
@@ -865,7 +878,7 @@ export default function App() {
 
               {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm shrink-0">{errorMsg}</div>}
               
-              <form onSubmit={handleSaveMovie} className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-6">
+              <form onSubmit={handleSaveMovie} className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-6">
                 <div className="space-y-6">
                   <div>
                     <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Movie Title *</label>
@@ -921,6 +934,40 @@ export default function App() {
                     <div>
                       <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Cast (Comma separated)</label>
                       <input type="text" value={formData.cast} onChange={(e) => setFormData({...formData, cast: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Leonardo DiCaprio, Joseph Gordon-Levitt" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Year</label>
+                      <input type="text" value={formData.release_year} onChange={(e) => setFormData({...formData, release_year: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2026" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Rating</label>
+                      <input type="text" value={formData.maturity_rating} onChange={(e) => setFormData({...formData, maturity_rating: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="18+" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Duration</label>
+                      <input type="text" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2h 15m" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Quality</label>
+                      <input type="text" value={formData.quality} onChange={(e) => setFormData({...formData, quality: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="HD" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Match %</label>
+                      <input type="number" value={formData.match_score} onChange={(e) => setFormData({...formData, match_score: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="98" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Views</label>
+                      <input type="number" value={formData.views} onChange={(e) => setFormData({...formData, views: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Downloads</label>
+                      <input type="number" value={formData.downloads} onChange={(e) => setFormData({...formData, downloads: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
                     </div>
                   </div>
 
@@ -1313,11 +1360,11 @@ const MovieDetailModal: React.FC<{
             {/* Left Column: Metadata & Description */}
             <div className="lg:col-span-2 space-y-8">
               <div className="flex flex-wrap items-center gap-5 text-sm font-semibold tracking-wide">
-                <span className="text-green-500">98% Match</span>
-                <span className="text-white/50">{movie.created_at ? new Date(movie.created_at).getFullYear() : '2026'}</span>
-                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70">18+</span>
-                <span className="text-white/50">2h 15m</span>
-                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70 uppercase">HD</span>
+                <span className="text-green-500">{movie.match_score || 98}% Match</span>
+                <span className="text-white/50">{movie.release_year || (movie.created_at ? new Date(movie.created_at).getFullYear() : '2026')}</span>
+                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70">{movie.maturity_rating || '18+'}</span>
+                <span className="text-white/50">{movie.duration || '2h 15m'}</span>
+                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70 uppercase">{movie.quality || 'HD'}</span>
               </div>
               
               <p className="text-lg md:text-xl text-white/80 leading-relaxed font-light">
@@ -1383,7 +1430,7 @@ const MovieDetailModal: React.FC<{
                     </div>
                     <div className="p-4 md:p-5 space-y-2 md:space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white/40">{m.created_at ? new Date(m.created_at).getFullYear() : '2026'}</span>
+                        <span className="text-xs font-bold text-white/40">{m.release_year || (m.created_at ? new Date(m.created_at).getFullYear() : '2026')}</span>
                       </div>
                       <h4 className="font-bold text-sm md:text-base truncate text-white/90">{m.title}</h4>
                     </div>
