@@ -571,7 +571,7 @@ export default function App() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-                          className="text-base md:text-lg text-white/90 mb-8 line-clamp-3 max-w-2xl font-medium text-shadow-lg leading-relaxed"
+                          className="text-base md:text-lg text-white/90 mb-8 max-w-2xl font-medium text-shadow-lg leading-relaxed"
                         >
                           {featuredMovie.description}
                         </motion.p>
@@ -910,7 +910,7 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
 
       <div className="flex flex-col gap-2.5 px-1">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity truncate">
+          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity">
             {movie.title}
           </h3>
           {movie.category && (
@@ -919,7 +919,7 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
             </span>
           )}
         </div>
-        <p className="text-white/50 text-[10px] md:text-xs line-clamp-2 leading-relaxed">
+        <p className="text-white/50 text-[10px] md:text-xs leading-relaxed">
           {movie.description}
         </p>
         
