@@ -336,6 +336,24 @@ export default function App() {
     }
   }, [movies]);
 
+  useEffect(() => {
+    const heroMovies = movies.filter(m => m.is_hero);
+    const featured = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
+    if (featured.length > 0) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = featured[0].posterUrl;
+      // @ts-ignore
+      link.fetchPriority = 'high';
+      document.head.appendChild(link);
+      
+      return () => {
+        document.head.removeChild(link);
+      };
+    }
+  }, [movies]);
+
   const fetchMovies = async () => {
     if (!supabase) {
       const savedMovies = localStorage.getItem('movieWallah_movies');
@@ -556,6 +574,8 @@ export default function App() {
                         alt={movie.title} 
                         className="w-full h-full object-cover hero-zoom-img" 
                         referrerPolicy="no-referrer"
+                        loading="eager"
+                        fetchPriority="high"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
                       
