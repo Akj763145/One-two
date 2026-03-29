@@ -181,22 +181,24 @@ const Navbar: React.FC<{
 
       {/* Search Bar - Centered */}
       <div className={`absolute left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 transition-all duration-500 ${isSearchActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-current opacity-30 group-focus-within:opacity-100 transition-opacity" size={18} />
-          <input 
-            type="text" 
-            value={searchQuery}
-            autoFocus={isSearchActive}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search movies, series, originals..." 
-            className="w-full bg-white/5 border border-white/10 rounded-full pl-12 pr-12 py-3 text-sm focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-current/20 transition-all placeholder-current/20 shadow-xl"
-          />
-          <button 
-            onClick={() => { setIsSearchActive(false); setSearchQuery(''); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <X size={18} className="opacity-50" />
-          </button>
+        <div className="p-[1px] rounded-full bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
+          <div className="relative group bg-black rounded-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 opacity-80 group-focus-within:opacity-100 transition-opacity" size={18} />
+            <input 
+              type="text" 
+              value={searchQuery}
+              autoFocus={isSearchActive}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search movies, series, originals..." 
+              className="w-full bg-transparent border-none rounded-full pl-12 pr-12 py-3 text-sm focus:outline-none transition-all placeholder-white/30 text-white"
+            />
+            <button 
+              onClick={() => { setIsSearchActive(false); setSearchQuery(''); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors text-white"
+            >
+              <X size={18} className="opacity-50 hover:opacity-100" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -204,9 +206,11 @@ const Navbar: React.FC<{
         {/* Search Toggle */}
         <button 
           onClick={() => setIsSearchActive(true)}
-          className="p-2 rounded-full hover:bg-white/5 transition-colors"
+          className="p-[1px] rounded-full bg-gradient-to-r from-red-500 to-red-900 hover:from-red-400 hover:to-red-800 transition-all shadow-lg shadow-red-500/20"
         >
-          <Search size={22} className="opacity-60 hover:opacity-100 transition-opacity" />
+          <div className="bg-black rounded-full p-2">
+            <Search size={22} className="text-white opacity-80 hover:opacity-100 transition-opacity" />
+          </div>
         </button>
 
         <div className="flex items-center gap-3">
