@@ -38,3 +38,16 @@
 .swiper-slide {
   width: auto !important;
 }
+
+@keyframes zoomOutEffect {
+  from { transform: scale(1.15); }
+  to { transform: scale(1); }
+}
+
+.hero-zoom-img {
+  will-change: transform;
+}
+
+.swiper-slide-active .hero-zoom-img {
+  animation: zoomOutEffect 2.5s ease-out forwards;
+}

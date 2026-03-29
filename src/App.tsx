@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode, Mousewheel } from 'swiper/modules';
+import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdsterraAd from './components/AdsterraAd';
 import AdsterraNativeBanner from './components/AdsterraNativeBanner';
 import 'swiper/css';
 import 'swiper/css/free-mode';
+import 'swiper/css/effect-coverflow';
+import 'swiper/css/pagination';
 
 interface Movie {
   id: string;
@@ -122,8 +124,9 @@ const Navbar: React.FC<{
   movies: Movie[],
   onDMCAClick: () => void,
   adminView: 'all' | 'featured',
-  setAdminView: (view: 'all' | 'featured') => void
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView }) => {
+  setAdminView: (view: 'all' | 'featured') => void,
+  setActiveCategory: (cat: string) => void
+}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView, setActiveCategory }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -141,7 +144,7 @@ const Navbar: React.FC<{
         : 'bg-black/40 backdrop-blur-md border-b border-white/5'
     }`}>
       <div className={`flex items-center gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
-        <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+        <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); setActiveCategory('All'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
           <Logo />
         </div>
       </div>
@@ -311,7 +314,6 @@ export default function App() {
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
-  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [selectedMovieForReviews, setSelectedMovieForReviews] = useState<Movie | null>(null);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -343,19 +345,14 @@ export default function App() {
     }
     setIsLoading(true);
     const { data, error } = await supabase.from('movies').select('*').order('created_at', { ascending: false });
-    if (!error && data) setMovies(data);
+    if (error) {
+      console.error('Error fetching movies:', error.message);
+      setErrorMsg('Failed to load movies. Please try again.');
+    } else if (data) {
+      setMovies(data);
+    }
     setIsLoading(false);
   };
-
-  useEffect(() => {
-    const heroMovies = movies.filter(m => m.is_hero);
-    const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
-    if (featuredMovies.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % featuredMovies.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [movies]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -421,35 +418,35 @@ export default function App() {
   };
 
   const handleDownload = async (movieId: string) => {
+    const movie = movies.find(m => m.id === movieId);
+    if (!movie) return;
+
+    const newDownloads = (movie.downloads || 0) + 1;
+    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
+
     if (supabase) {
-      const movie = movies.find(m => m.id === movieId);
-      if (movie) {
-        const newDownloads = (movie.downloads || 0) + 1;
-        await supabase.from('movies').update({ downloads: newDownloads }).eq('id', movieId);
-        setMovies(movies.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
-      }
-    } else {
-      const movie = movies.find(m => m.id === movieId);
-      if (movie) {
-        const newDownloads = (movie.downloads || 0) + 1;
-        setMovies(movies.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
+      try {
+        const { error } = await supabase.from('movies').update({ downloads: newDownloads }).eq('id', movieId);
+        if (error) console.error('Error updating downloads:', error.message);
+      } catch (err) {
+        console.error('Failed to update downloads:', err);
       }
     }
   };
 
   const handleView = async (movieId: string) => {
+    const movie = movies.find(m => m.id === movieId);
+    if (!movie) return;
+
+    const newViews = (movie.views || 0) + 1;
+    setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: newViews } : m));
+
     if (supabase) {
-      const movie = movies.find(m => m.id === movieId);
-      if (movie) {
-        const newViews = (movie.views || 0) + 1;
-        await supabase.from('movies').update({ views: newViews }).eq('id', movieId);
-        setMovies(movies.map(m => m.id === movieId ? { ...m, views: newViews } : m));
-      }
-    } else {
-      const movie = movies.find(m => m.id === movieId);
-      if (movie) {
-        const newViews = (movie.views || 0) + 1;
-        setMovies(movies.map(m => m.id === movieId ? { ...m, views: newViews } : m));
+      try {
+        const { error } = await supabase.from('movies').update({ views: newViews }).eq('id', movieId);
+        if (error) console.error('Error updating views:', error.message);
+      } catch (err) {
+        console.error('Failed to update views:', err);
       }
     }
   };
@@ -461,7 +458,6 @@ export default function App() {
   });
   const heroMovies = movies.filter(m => m.is_hero);
   const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
-  const featuredMovie = featuredMovies[currentHeroIndex] || null;
   const trendingMovies = movies.slice(0, 10);
 
   return (
@@ -484,6 +480,7 @@ export default function App() {
         onDMCAClick={() => setShowDMCA(true)}
         adminView={adminView}
         setAdminView={setAdminView}
+        setActiveCategory={setActiveCategory}
       />
       
       <main className="pt-20 md:pt-24 pb-24">
@@ -520,108 +517,85 @@ export default function App() {
         ) : (
           <>
             {/* Hero Section */}
-            {featuredMovie && !searchQuery && !isSearchActive && activeCategory === 'All' && (
-              <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden">
-                {/* Preload hero images */}
-                <div className="absolute w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
-                  {featuredMovies.map(m => (
-                    <img key={`preload-${m.id}`} src={m.posterUrl} decoding="async" alt="preload" />
-                  ))}
-                </div>
-                <AnimatePresence initial={false}>
-                  <motion.div
-                    key={featuredMovie.id}
-                    initial={{ clipPath: 'circle(0% at 50% 50%)', zIndex: 10 }}
-                    animate={{ clipPath: 'circle(150% at 50% 50%)', zIndex: 10 }}
-                    exit={{ opacity: 0.8, zIndex: 0 }}
-                    transition={{ duration: 1.5, ease: [0.76, 0, 0.24, 1] }}
-                    className="absolute inset-0 bg-black"
-                  >
-                    <motion.img 
-                      src={featuredMovie.posterUrl} 
-                      alt={featuredMovie.title} 
-                      className="w-full h-full object-cover" 
-                      referrerPolicy="no-referrer"
-                      fetchPriority="high"
-                      decoding="async"
-                      initial={{ scale: 1.1 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 3, ease: "easeOut" }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/20 to-transparent" />
-                    
-                    <div className="absolute inset-0 flex items-end pb-20 md:pb-32 px-6 md:px-16">
-                      <div className="max-w-3xl">
-                        <motion.h1 
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-                          className="text-4xl md:text-6xl font-bold text-white mb-4 tracking-tighter text-shadow-xl flex items-center gap-4 flex-wrap"
-                        >
-                          {featuredMovie.title}
-                          {featuredMovie.category && (
-                            <span className="text-sm md:text-base font-bold uppercase tracking-widest bg-red-600/80 backdrop-blur-md text-white px-3 py-1 rounded-full border border-red-500/50">
-                              {featuredMovie.category}
-                            </span>
-                          )}
-                        </motion.h1>
-                        
-                        <motion.p 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-                          className="text-base md:text-lg text-white/90 mb-8 line-clamp-3 max-w-2xl font-medium text-shadow-lg leading-relaxed"
-                        >
-                          {featuredMovie.description}
-                        </motion.p>
-                        
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
-                          className="flex flex-wrap items-center gap-5"
-                        >
-                          {featuredMovie.viewUrl && (
-                            <a href={featuredMovie.viewUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleView(featuredMovie.id)} className="apple-btn-primary !bg-white !text-black !px-10 !py-4 !text-lg">
-                              <Play size={24} className="fill-current" /> Play Now
+            {featuredMovies.length > 0 && !searchQuery && !isSearchActive && activeCategory === 'All' && (
+              <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden pt-10 md:pt-16">
+                <Swiper
+                  effect={'coverflow'}
+                  grabCursor={true}
+                  centeredSlides={true}
+                  slidesPerView={'auto'}
+                  loop={true}
+                  speed={1500}
+                  autoplay={{
+                    delay: 2000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
+                  mousewheel={{
+                    forceToAxis: true,
+                    sensitivity: 1,
+                  }}
+                  coverflowEffect={{
+                    rotate: 0,
+                    stretch: 0,
+                    depth: 100,
+                    modifier: 2,
+                    slideShadows: false,
+                  }}
+                  pagination={{
+                    clickable: true,
+                    dynamicBullets: true,
+                  }}
+                  modules={[EffectCoverflow, Autoplay, Pagination, Mousewheel]}
+                  className="hero-swiper w-full h-full !px-4 md:!px-20"
+                >
+                  {featuredMovies.map((movie) => (
+                    <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
+                      <img 
+                        src={movie.posterUrl} 
+                        alt={movie.title} 
+                        className="w-full h-full object-cover hero-zoom-img" 
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
+                      
+                      <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        className="absolute inset-0 flex flex-col justify-end p-6 md:p-10"
+                      >
+                        <h2 className="text-2xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg tracking-tight">{movie.title}</h2>
+                        {movie.category && (
+                          <span className="inline-block w-fit text-[10px] md:text-xs font-bold uppercase tracking-widest bg-red-600 text-white px-3 py-1 rounded-full mb-4">
+                            {movie.category}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-4">
+                          {movie.viewUrl && (
+                            <a href={movie.viewUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleView(movie.id)} className="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-bold text-sm hover:bg-red-600 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-xl">
+                              <Play size={18} className="fill-current" /> Watch Now
                             </a>
                           )}
                           <a 
-                            href={featuredMovie.url} 
+                            href={movie.url} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            onClick={() => handleDownload(featuredMovie.id)}
-                            className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all group" 
-                            title="Download"
+                            onClick={() => handleDownload(movie.id)}
+                            className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all duration-300 transform hover:scale-110 active:scale-90"
                           >
-                            <Download size={20} className="group-hover:scale-110 transition-transform" />
+                            <Download size={20} />
                           </a>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Hero Indicators */}
-                {featuredMovies.length > 1 && (
-                  <div className="absolute bottom-10 right-16 z-30 flex gap-3">
-                    {featuredMovies.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentHeroIndex(idx)}
-                        className={`h-1.5 transition-all duration-500 rounded-full ${
-                          idx === currentHeroIndex ? 'w-8 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
+                        </div>
+                      </motion.div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
               </div>
             )}
 
             {/* Search Results or Rows */}
-            <div className={`px-6 md:px-16 ${searchQuery || !featuredMovie || activeCategory !== 'All' ? 'pt-12' : 'mt-12 relative z-20'}`}>
+            <div className={`px-6 md:px-16 ${searchQuery || featuredMovies.length === 0 || activeCategory !== 'All' ? 'pt-12' : 'mt-12 relative z-20'}`}>
               
               {/* Category Filter */}
               <div className="mb-8 overflow-x-auto custom-scrollbar pb-2">
@@ -909,12 +883,12 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
       </div>
 
       <div className="flex flex-col gap-2.5 px-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity truncate">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity whitespace-normal flex-1">
             {movie.title}
           </h3>
           {movie.category && (
-            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 px-2 py-0.5 rounded-full whitespace-nowrap">
+            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 mt-0.5">
               {movie.category}
             </span>
           )}
@@ -998,7 +972,7 @@ const ReviewsModal: React.FC<{ movie: Movie; onClose: () => void }> = ({ movie, 
     setIsLoading(true);
     if (supabase) {
       const { data } = await supabase.from('reviews').select('*').eq('movie_id', movie.id).order('created_at', { ascending: false });
-      if (data) setReviews(data);
+      setReviews(data || []);
     } else {
       const saved = localStorage.getItem(`reviews_${movie.id}`);
       if (saved) setReviews(JSON.parse(saved));
@@ -1021,8 +995,17 @@ const ReviewsModal: React.FC<{ movie: Movie; onClose: () => void }> = ({ movie, 
     };
 
     if (supabase) {
-      await supabase.from('reviews').insert([newReview]);
-      fetchReviews();
+      try {
+        const { error } = await supabase.from('reviews').insert([newReview]);
+        if (error) {
+          console.error('Error submitting review:', error.message);
+          alert('Failed to submit review. Please try again.');
+        } else {
+          fetchReviews();
+        }
+      } catch (err) {
+        console.error('Failed to submit review:', err);
+      }
     } else {
       const updated = [newReview, ...reviews];
       setReviews(updated);

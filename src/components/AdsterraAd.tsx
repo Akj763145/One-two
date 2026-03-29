@@ -1,27 +1,48 @@
+import React, { useEffect, useRef } from 'react';
+
 interface AdsterraAdProps {
   adKey?: string;
   width?: number;
   height?: number;
-  className?: string;
 }
 
-export default function AdsterraAd({ 
-  adKey = 'YOUR_ADSTERRA_KEY', 
-  width = 728, 
-  height = 90,
-  className = ''
-}: AdsterraAdProps) {
+const AdsterraAd: React.FC<AdsterraAdProps> = ({ 
+  adKey = "48fc53489149f9fac60634e87fd9f134", 
+  width = 160, 
+  height = 300 
+}) => {
+  const adRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (adRef.current && !adRef.current.firstChild) {
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.innerHTML = `
+        atOptions = {
+          'key' : '${adKey}',
+          'format' : 'iframe',
+          'height' : ${height},
+          'width' : ${width},
+          'params' : {}
+        };
+      `;
+      
+      const invokeScript = document.createElement('script');
+      invokeScript.type = 'text/javascript';
+      invokeScript.src = `//www.highperformanceformat.com/${adKey}/invoke.js`;
+      
+      adRef.current.appendChild(script);
+      adRef.current.appendChild(invokeScript);
+    }
+  }, [adKey, width, height]);
+
   return (
-    <div className={`w-full flex justify-center my-8 overflow-hidden ${className}`}>
-      <iframe
-        src={`/ad.html?key=${adKey}&width=${width}&height=${height}`}
-        width={width}
-        height={height}
-        frameBorder="0"
-        scrolling="no"
-        title="Advertisement"
-        className="bg-white/5 border border-white/10 rounded-lg max-w-full"
-      />
-    </div>
+    <div 
+      ref={adRef} 
+      className="flex justify-center items-center overflow-hidden bg-zinc-900/50 rounded-lg"
+      style={{ width: `${width}px`, height: `${height}px` }}
+    />
   );
-}
+};
+
+export default AdsterraAd;
