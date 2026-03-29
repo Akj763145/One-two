@@ -732,10 +732,6 @@ export default function App() {
           </>
         )}
         
-        {/* Adsterra Banner Ad */}
-        <div className="px-6 md:px-16 mt-12">
-          <AdsterraAd />
-        </div>
       </main>
       
       {/* Footer */}
