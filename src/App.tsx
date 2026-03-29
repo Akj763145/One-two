@@ -313,6 +313,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
   
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -518,11 +519,20 @@ export default function App() {
     }
   };
 
-  const filteredMovies = movies.filter(m => {
-    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'All' || m.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredMovies = React.useMemo(() => {
+    const query = deferredSearchQuery.toLowerCase().trim();
+    if (!query && activeCategory === 'All') return movies;
+
+    return movies.filter(m => {
+      const matchesSearch = !query || 
+        m.title.toLowerCase().includes(query) ||
+        (m.cast && m.cast.toLowerCase().includes(query)) ||
+        (m.director && m.director.toLowerCase().includes(query));
+      
+      const matchesCategory = activeCategory === 'All' || m.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [movies, deferredSearchQuery, activeCategory]);
 
   const currentMovies = filteredMovies;
 
@@ -570,7 +580,7 @@ export default function App() {
                   {heroMovies.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                       {heroMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                       ))}
                     </div>
                   ) : (
@@ -703,7 +713,7 @@ export default function App() {
                             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
                           >
                             {currentMovies.map(movie => (
-                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                             ))}
                           </motion.div>
                         </div>
@@ -758,7 +768,7 @@ export default function App() {
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: idx * 0.05 }}
                             >
-                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                             </motion.div>
                           </SwiperSlide>
                         ))}
@@ -794,7 +804,7 @@ export default function App() {
                                 visible: { opacity: 1, y: 0 }
                               }}
                             >
-                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                             </motion.div>
                           ))}
                         </motion.div>
@@ -1065,7 +1075,20 @@ const MoviePoster: React.FC<{ src: string; alt: string; className?: string; cont
   );
 };
 
-const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void, onView: (id: string) => void, onShowDetails: (m: Movie) => void }> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails }) => {
+const MovieCard: React.FC<{ 
+  movie: Movie, 
+  isAdmin: boolean, 
+  onEdit: (m: Movie) => void, 
+  onDelete: (id: string) => void, 
+  onDownload: (id: string) => void, 
+  onView: (id: string) => void, 
+  onShowDetails: (m: Movie) => void,
+  searchQuery?: string
+}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '' }) => {
+  const query = searchQuery.toLowerCase().trim();
+  const matchesCast = query && movie.cast?.toLowerCase().includes(query);
+  const matchesDirector = query && movie.director?.toLowerCase().includes(query);
+
   return (
     <motion.div
       variants={{
@@ -1101,6 +1124,23 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
         <p className="text-white/50 text-[10px] md:text-xs line-clamp-2 leading-relaxed">
           {movie.description}
         </p>
+        
+        {(matchesCast || matchesDirector) && (
+          <div className="flex flex-col gap-1 mt-1">
+            {matchesDirector && (
+              <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-blue-400 font-medium">
+                <span className="opacity-60 uppercase tracking-tighter">Director:</span>
+                <span className="line-clamp-1">{movie.director}</span>
+              </div>
+            )}
+            {matchesCast && (
+              <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-emerald-400 font-medium">
+                <span className="opacity-60 uppercase tracking-tighter">Cast:</span>
+                <span className="line-clamp-1">{movie.cast}</span>
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
