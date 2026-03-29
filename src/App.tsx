@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
@@ -150,10 +150,33 @@ const Navbar: React.FC<{
         ? 'bg-black/90 backdrop-blur-2xl border-b border-white/10 py-3' 
         : 'bg-black/40 backdrop-blur-md border-b border-white/5'
     }`}>
-      <div className={`flex items-center gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
+      <div className={`flex items-center gap-8 md:gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); setActiveCategory('All'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
           <Logo />
         </div>
+        
+        {isAdmin && (
+          <div className="hidden md:flex items-center gap-6">
+            <button 
+              onClick={() => setAdminView('all')}
+              className={`text-xs font-bold uppercase tracking-widest transition-all hover:text-white ${adminView === 'all' ? 'text-white border-b-2 border-red-600 pb-1' : 'text-white/40'}`}
+            >
+              Dashboard
+            </button>
+            <button 
+              onClick={() => setAdminView('featured')}
+              className={`text-xs font-bold uppercase tracking-widest transition-all hover:text-white ${adminView === 'featured' ? 'text-white border-b-2 border-red-600 pb-1' : 'text-white/40'}`}
+            >
+              Featured
+            </button>
+            <button 
+              onClick={onAddClick}
+              className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-all bg-emerald-400/10 px-3 py-1.5 rounded-full border border-emerald-400/20"
+            >
+              <Plus size={14} /> Add Movie
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search Bar - Centered */}
@@ -879,115 +902,148 @@ export default function App() {
               className="w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] md:rounded-3xl p-6 md:p-10 relative bg-zinc-900 border-x-0 md:border border-white/10 flex flex-col"
             >
               <div className="flex justify-between items-center mb-8 shrink-0">
-                <h3 className="text-2xl font-bold flex items-center gap-3 text-current">
-                  {editingMovie ? <Edit size={28} className="text-blue-400" /> : <Plus size={28} className="text-green-400" />} 
-                  {editingMovie ? 'Edit Movie' : 'Add New Movie'}
-                </h3>
-                <button onClick={() => setShowAddEditModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={24} /></button>
+                <div className="flex flex-col gap-1">
+                  <div className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md w-fit ${editingMovie ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                    {editingMovie ? 'Management Mode' : 'Creation Mode'}
+                  </div>
+                  <h3 className="text-2xl font-bold flex items-center gap-3 text-white">
+                    {editingMovie ? <Edit size={24} className="text-blue-400" /> : <Plus size={24} className="text-green-400" />} 
+                    {editingMovie ? 'Edit Movie' : 'Add New Movie'}
+                  </h3>
+                </div>
+                <button onClick={() => setShowAddEditModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"><X size={24} /></button>
               </div>
 
               {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm shrink-0">{errorMsg}</div>}
               
-              <form onSubmit={handleSaveMovie} className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-6">
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Movie Title *</label>
-                    <input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Inception" />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Download URL *</label>
-                      <input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+              <form onSubmit={handleSaveMovie} className="flex-1 flex flex-col gap-8 overflow-y-auto pr-2 custom-scrollbar pb-20 md:pb-6">
+                <div className="space-y-10">
+                  {/* Section: Basic Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                      <FileText size={16} className="text-blue-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Basic Information</h4>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Watch URL (Optional)</label>
-                      <input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Poster Image URL *</label>
-                      <input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Category *</label>
-                      <div className="relative">
-                        <select 
-                          required 
-                          value={formData.category} 
-                          onChange={(e) => setFormData({...formData, category: e.target.value})} 
-                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all appearance-none cursor-pointer"
-                        >
-                          {CATEGORIES.filter(c => c !== 'All').map(category => (
-                            <option key={category} value={category} className="bg-zinc-900 text-white">{category}</option>
-                          ))}
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                          <ChevronRight size={18} className="rotate-90" />
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Movie Title *</label>
+                        <input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Inception" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Description *</label>
+                        <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all resize-none" placeholder="A brief synopsis..." />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Category *</label>
+                        <div className="relative">
+                          <select 
+                            required 
+                            value={formData.category} 
+                            onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all appearance-none cursor-pointer"
+                          >
+                            {CATEGORIES.filter(c => c !== 'All').map(category => (
+                              <option key={category} value={category} className="bg-zinc-900 text-white">{category}</option>
+                            ))}
+                          </select>
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                            <ChevronRight size={18} className="rotate-90" />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Description *</label>
-                    <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={4} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all resize-none" placeholder="A brief synopsis..." />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Director</label>
-                      <input type="text" value={formData.director} onChange={(e) => setFormData({...formData, director: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Christopher Nolan" />
+                  {/* Section: Media Links */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                      <Link size={16} className="text-purple-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Media & Assets</h4>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Cast (Comma separated)</label>
-                      <input type="text" value={formData.cast} onChange={(e) => setFormData({...formData, cast: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Leonardo DiCaprio, Joseph Gordon-Levitt" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Year</label>
-                      <input type="text" value={formData.release_year} onChange={(e) => setFormData({...formData, release_year: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2026" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Rating</label>
-                      <input type="text" value={formData.maturity_rating} onChange={(e) => setFormData({...formData, maturity_rating: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="18+" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Duration</label>
-                      <input type="text" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2h 15m" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Quality</label>
-                      <input type="text" value={formData.quality} onChange={(e) => setFormData({...formData, quality: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="HD" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Match %</label>
-                      <input type="number" value={formData.match_score} onChange={(e) => setFormData({...formData, match_score: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="98" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Poster Image URL *</label>
+                        <input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Download URL *</label>
+                        <input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Watch URL (Optional)</label>
+                        <input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Views</label>
-                      <input type="number" value={formData.views} onChange={(e) => setFormData({...formData, views: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
+                  {/* Section: Movie Metadata */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                      <Info size={16} className="text-emerald-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Movie Details</h4>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Downloads</label>
-                      <input type="number" value={formData.downloads} onChange={(e) => setFormData({...formData, downloads: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Director</label>
+                          <input type="text" value={formData.director} onChange={(e) => setFormData({...formData, director: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Christopher Nolan" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Cast</label>
+                          <input type="text" value={formData.cast} onChange={(e) => setFormData({...formData, cast: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Leonardo DiCaprio" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Year</label>
+                          <input type="text" value={formData.release_year} onChange={(e) => setFormData({...formData, release_year: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2026" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Rating</label>
+                          <input type="text" value={formData.maturity_rating} onChange={(e) => setFormData({...formData, maturity_rating: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="18+" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Duration</label>
+                          <input type="text" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="2h 15m" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Quality</label>
+                          <input type="text" value={formData.quality} onChange={(e) => setFormData({...formData, quality: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="HD" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Match %</label>
+                          <input type="number" value={formData.match_score} onChange={(e) => setFormData({...formData, match_score: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="98" />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer" onClick={() => setFormData({...formData, is_hero: !formData.is_hero})}>
-                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.is_hero ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
-                      {formData.is_hero && <Plus size={16} className="text-white rotate-45" />}
+                  {/* Section: Stats & Settings */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                      <BarChart3 size={16} className="text-yellow-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/50">Stats & Settings</h4>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-current">Show in Hero Section</p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on homepage slider</p>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Views</label>
+                          <input type="number" value={formData.views} onChange={(e) => setFormData({...formData, views: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Initial Downloads</label>
+                          <input type="number" value={formData.downloads} onChange={(e) => setFormData({...formData, downloads: parseInt(e.target.value) || 0})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="0" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all" onClick={() => setFormData({...formData, is_hero: !formData.is_hero})}>
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.is_hero ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
+                          {formData.is_hero && <Plus size={16} className="text-white rotate-45" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-current">Show in Hero Section</p>
+                          <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on homepage slider</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1022,11 +1078,22 @@ export default function App() {
 
         {movieToDelete && (
           <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-6 text-center bg-white/10">
-              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4"><Trash2 size={32} className="text-red-500" /></div>
-              <h3 className="text-xl font-bold mb-2 text-current">Delete Movie</h3>
-              <p className="text-current opacity-50 mb-6 text-sm">Are you sure you want to delete this movie? This action cannot be undone.</p>
-              <div className="flex gap-3"><button onClick={() => setMovieToDelete(null)} className="flex-1 bg-white/10 hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3 transition-colors">Delete</button></div>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-sm glass-panel rounded-3xl p-8 text-center bg-zinc-900 border border-white/10 shadow-2xl">
+              <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                <Trash2 size={40} className="text-red-500" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3 text-white">Delete Movie?</h3>
+              <p className="text-white/50 mb-8 text-sm leading-relaxed">
+                Are you sure you want to delete <span className="text-white font-bold">"{movies.find(m => m.id === movieToDelete)?.title}"</span>? This action is permanent and cannot be undone.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button onClick={confirmDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl py-4 transition-all shadow-lg shadow-red-600/20 active:scale-95">
+                  Yes, Delete Permanently
+                </button>
+                <button onClick={() => setMovieToDelete(null)} className="w-full bg-white/5 hover:bg-white/10 text-white/70 font-bold rounded-xl py-4 transition-colors">
+                  Cancel
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
