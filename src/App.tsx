@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
@@ -368,12 +368,25 @@ export default function App() {
       // Push a new state when the modal opens
       window.history.pushState({ modal: 'movie-details' }, '');
       window.addEventListener('popstate', handlePopState);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
+      document.body.style.overflow = 'unset';
     };
   }, [selectedMovieForDetails !== null]);
+
+  // Also lock scroll for other modals
+  useEffect(() => {
+    if (showAddEditModal || showDMCA || showAdminLogin || movieToDelete) {
+      document.body.style.overflow = 'hidden';
+    } else if (!selectedMovieForDetails) {
+      document.body.style.overflow = 'unset';
+    }
+  }, [showAddEditModal, showDMCA, showAdminLogin, movieToDelete, selectedMovieForDetails]);
 
   const fetchMovies = async () => {
     if (!supabase) {
@@ -595,14 +608,7 @@ export default function App() {
                 >
                   {featuredMovies.map((movie) => (
                     <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
-                      <img 
-                        src={movie.posterUrl} 
-                        alt={movie.title} 
-                        className="w-full h-full object-cover hero-zoom-img" 
-                        referrerPolicy="no-referrer"
-                        loading="eager"
-                        fetchPriority="high"
-                      />
+                      <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
                       
                       <motion.div 
@@ -675,11 +681,18 @@ export default function App() {
                     <div className="flex-1">
                       {currentMovies.length > 0 ? (
                         <div className="flex flex-col gap-12">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                          <motion.div 
+                            initial="hidden"
+                            animate="visible"
+                            variants={{
+                              visible: { transition: { staggerChildren: 0.05 } }
+                            }}
+                            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                          >
                             {currentMovies.map(movie => (
                               <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
                             ))}
-                          </div>
+                          </motion.div>
                         </div>
                       ) : (
                         <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
@@ -725,9 +738,15 @@ export default function App() {
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
-                        {trendingMovies.map((movie) => (
+                        {trendingMovies.map((movie, idx) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                            <motion.div
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.05 }}
+                            >
+                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} />
+                            </motion.div>
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -829,54 +848,99 @@ export default function App() {
         )}
 
         {showAddEditModal && (
-          <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="w-full max-w-lg glass-panel rounded-3xl p-6 md:p-8 relative my-8 bg-white/10">
-              <button onClick={() => setShowAddEditModal(false)} className="absolute top-6 right-6 text-current opacity-50 hover:opacity-100 bg-current/10 rounded-full p-1 transition-colors"><X size={20} /></button>
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-current">{editingMovie ? <Edit size={24} /> : <Plus size={24} />} {editingMovie ? 'Edit Movie' : 'Add New Movie'}</h3>
-              {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm">{errorMsg}</div>}
-              <form onSubmit={handleSaveMovie} className="space-y-4">
-                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Movie Title *</label><input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. Inception" /></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Download URL *</label><input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Watch URL (Optional)</label><input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Poster Image URL *</label><input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="https://..." /></div>
+          <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl overflow-y-auto p-0 md:p-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} 
+              className="w-full max-w-2xl min-h-screen md:min-h-0 md:rounded-3xl p-6 md:p-10 relative bg-zinc-900 border-x-0 md:border border-white/10 flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-8 shrink-0">
+                <h3 className="text-2xl font-bold flex items-center gap-3 text-current">
+                  {editingMovie ? <Edit size={28} className="text-blue-400" /> : <Plus size={28} className="text-green-400" />} 
+                  {editingMovie ? 'Edit Movie' : 'Add New Movie'}
+                </h3>
+                <button onClick={() => setShowAddEditModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={24} /></button>
+              </div>
+
+              {errorMsg && <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm shrink-0">{errorMsg}</div>}
+              
+              <form onSubmit={handleSaveMovie} className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-6">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Category *</label>
-                    <select 
-                      required 
-                      value={formData.category} 
-                      onChange={(e) => setFormData({...formData, category: e.target.value})} 
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all appearance-none"
-                    >
-                      {CATEGORIES.filter(c => c !== 'All').map(category => (
-                        <option key={category} value={category} className="bg-zinc-900 text-white">{category}</option>
-                      ))}
-                    </select>
+                    <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Movie Title *</label>
+                    <input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Inception" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Download URL *</label>
+                      <input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Watch URL (Optional)</label>
+                      <input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Poster Image URL *</label>
+                      <input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Category *</label>
+                      <div className="relative">
+                        <select 
+                          required 
+                          value={formData.category} 
+                          onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all appearance-none cursor-pointer"
+                        >
+                          {CATEGORIES.filter(c => c !== 'All').map(category => (
+                            <option key={category} value={category} className="bg-zinc-900 text-white">{category}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                          <ChevronRight size={18} className="rotate-90" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Description *</label>
+                    <textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={4} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all resize-none" placeholder="A brief synopsis..." />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Director</label>
+                      <input type="text" value={formData.director} onChange={(e) => setFormData({...formData, director: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Christopher Nolan" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Cast (Comma separated)</label>
+                      <input type="text" value={formData.cast} onChange={(e) => setFormData({...formData, cast: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. Leonardo DiCaprio, Joseph Gordon-Levitt" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer" onClick={() => setFormData({...formData, is_hero: !formData.is_hero})}>
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.is_hero ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
+                      {formData.is_hero && <Plus size={16} className="text-white rotate-45" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-current">Show in Hero Section</p>
+                      <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on homepage slider</p>
+                    </div>
                   </div>
                 </div>
-                <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Description *</label><textarea required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all resize-none" placeholder="A brief synopsis..." /></div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Director</label><input type="text" value={formData.director} onChange={(e) => setFormData({...formData, director: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. Christopher Nolan" /></div>
-                  <div><label className="block text-xs font-medium text-current opacity-50 uppercase tracking-wider mb-1.5 pl-1">Cast (Comma separated)</label><input type="text" value={formData.cast} onChange={(e) => setFormData({...formData, cast: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current focus:outline-none focus:ring-2 focus:ring-current/50 transition-all" placeholder="e.g. Leonardo DiCaprio, Joseph Gordon-Levitt" /></div>
-                </div>
 
-                <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <input 
-                    type="checkbox" 
-                    id="is_hero"
-                    checked={formData.is_hero}
-                    onChange={(e) => setFormData({...formData, is_hero: e.target.checked})}
-                    className="w-5 h-5 rounded border-white/20 bg-black/50 text-red-600 focus:ring-red-500/50 transition-all cursor-pointer"
-                  />
-                  <label htmlFor="is_hero" className="text-sm font-medium text-current cursor-pointer select-none">
-                    Show in Hero Section (Featured)
-                  </label>
+                <div className="pt-6 flex flex-col sm:flex-row gap-3 shrink-0 mt-auto">
+                  <button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-current font-bold rounded-xl py-4 transition-colors order-2 sm:order-1">Cancel</button>
+                  <button type="submit" className="flex-1 bg-white text-black hover:bg-red-600 hover:text-white font-bold rounded-xl py-4 transition-all order-1 sm:order-2 shadow-xl shadow-white/5">
+                    {editingMovie ? 'Save Changes' : 'Add Movie'}
+                  </button>
                 </div>
-
-                <div className="pt-4 flex gap-3"><button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-white/10 hover:bg-white/20 text-current font-bold rounded-xl py-3 transition-colors">Cancel</button><button type="submit" className="flex-1 bg-white text-black hover:opacity-90 font-bold rounded-xl py-3 transition-opacity">{editingMovie ? 'Save Changes' : 'Add Movie'}</button></div>
               </form>
             </motion.div>
           </motion.div>
@@ -884,7 +948,7 @@ export default function App() {
 
         {selectedMovieForDetails && (
           <MovieDetailModal 
-            key="movie-detail-modal" 
+            key={selectedMovieForDetails.id} 
             movie={selectedMovieForDetails} 
             allMovies={movies}
             onClose={() => {
@@ -914,36 +978,64 @@ export default function App() {
   );
 }
 
-const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void, onView: (id: string) => void, onShowDetails: (m: Movie) => void }> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails }) => {
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
+// Reusable Movie Poster Component with Fallback
+const MoviePoster: React.FC<{ src: string; alt: string; className?: string; contain?: boolean; autoHeight?: boolean }> = ({ src, alt, className = "", contain = false, autoHeight = false }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  // Reset states when src changes
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
 
   return (
+    <div className={`relative w-full ${autoHeight ? 'h-auto' : 'h-full'} bg-zinc-800/50 overflow-hidden ${className}`}>
+      {(!isLoaded && !hasError) && (
+        <div className={`${autoHeight ? 'aspect-[2/3]' : 'absolute inset-0'} bg-zinc-800/80 flex items-center justify-center z-10`}>
+          <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
+        </div>
+      )}
+      
+      {(hasError || !src) ? (
+        <div className={`${autoHeight ? 'aspect-[2/3]' : 'absolute inset-0'} flex flex-col items-center justify-center bg-zinc-900 text-white/20 p-4 text-center z-10`}>
+          <Film size={40} className="mb-2 opacity-20" />
+          <span className="text-[9px] font-black uppercase tracking-widest opacity-40">No Poster</span>
+        </div>
+      ) : (
+        <img 
+          src={src} 
+          alt={alt} 
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          className={`w-full ${autoHeight ? 'h-auto' : 'h-full'} ${contain ? 'object-contain' : 'object-cover'} transition-all duration-500 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`} 
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+    </div>
+  );
+};
+
+const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) => void, onDelete: (id: string) => void, onDownload: (id: string) => void, onView: (id: string) => void, onShowDetails: (m: Movie) => void }> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails }) => {
+  return (
     <motion.div
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.2 }}
+      variants={{
+        hidden: { opacity: 0, y: 15 },
+        visible: { opacity: 1, y: 0 }
+      }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="flex flex-col gap-3 group w-full"
     >
       <div 
         onClick={() => onShowDetails(movie)}
-        className="relative rounded-2xl overflow-hidden aspect-[2/3] w-full bg-white/5 shadow-xl ring-1 ring-white/10 group-hover:ring-white/30 transition-all cursor-pointer"
+        className="relative rounded-2xl overflow-hidden w-full bg-white/5 shadow-xl ring-1 ring-white/10 group-hover:ring-white/30 transition-all cursor-pointer"
       >
-        {/* Skeleton Loader */}
-        {!isImageLoaded && (
-          <div className="absolute inset-0 bg-zinc-800 animate-pulse flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-current opacity-10 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+        <MoviePoster src={movie.posterUrl} alt={movie.title} contain autoHeight className="group-hover:scale-105 transition-transform duration-500" />
         
-        <img 
-          src={movie.posterUrl} 
-          alt={movie.title} 
-          onLoad={() => setIsImageLoaded(true)}
-          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${isImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110 blur-sm'}`} 
-          referrerPolicy="no-referrer"
-        />
-        
-        {/* Rating & Views Badges removed */}
-
         {/* Subtle overlay on hover */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       </div>
@@ -1021,7 +1113,6 @@ const MovieCard: React.FC<{ movie: Movie, isAdmin: boolean, onEdit: (m: Movie) =
     </motion.div>
   );
 });
-
 const MovieDetailModal: React.FC<{ 
   movie: Movie; 
   allMovies: Movie[];
@@ -1032,12 +1123,10 @@ const MovieDetailModal: React.FC<{
 }> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [rating, setRating] = useState(5);
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'reviews'>('info');
 
   const fetchReviews = useCallback(async () => {
     setIsReviewsLoading(true);
@@ -1058,14 +1147,9 @@ const MovieDetailModal: React.FC<{
   }, [movie.id]);
 
   useEffect(() => {
-    setIsInitialLoading(true);
-    fetchReviews().then(() => {
-      // Small delay for smooth transition
-      setTimeout(() => setIsInitialLoading(false), 500);
-    });
-    // Scroll modal to top when movie changes
-    const modalContent = document.getElementById('movie-detail-content');
-    if (modalContent) modalContent.scrollTo({ top: 0, behavior: 'auto' });
+    fetchReviews();
+    const modalContainer = document.getElementById('movie-detail-modal-container');
+    if (modalContainer) modalContainer.scrollTo({ top: 0, behavior: 'auto' });
   }, [movie.id, fetchReviews]);
 
   const avgRating = useMemo(() => {
@@ -1076,7 +1160,7 @@ const MovieDetailModal: React.FC<{
   const similarMovies = useMemo(() => {
     return allMovies
       .filter(m => m.category === movie.category && m.id !== movie.id)
-      .slice(0, 6);
+      .slice(0, 12);
   }, [allMovies, movie.category, movie.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1118,259 +1202,290 @@ const MovieDetailModal: React.FC<{
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }} 
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto"
-    >
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-hidden">
+      {/* Backdrop */}
       <motion.div 
-        initial={{ scale: 0.95, opacity: 0, y: 10 }} 
-        animate={{ scale: 1, opacity: 1, y: 0 }} 
-        exit={{ scale: 0.95, opacity: 0, y: 10 }} 
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="w-full max-w-4xl glass-panel rounded-3xl bg-zinc-900/90 border border-white/10 my-8 flex flex-col max-h-[90vh] overflow-hidden"
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }} 
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Scrollable Container */}
+      <div 
+        id="movie-detail-modal-container"
+        className="fixed inset-0 overflow-y-auto pt-4 md:pt-12 pb-12 px-0 md:px-4 custom-scrollbar overscroll-contain scroll-pt-8 md:scroll-pt-12"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        {/* Header with Image Background */}
-        <div className="relative h-48 md:h-64 shrink-0 overflow-hidden">
-          <img 
-            src={movie.posterUrl} 
-            className="w-full h-full object-cover opacity-30 blur-xl scale-110" 
-            alt=""
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
-          
+        <div className="flex justify-center min-h-full items-start">
+          <motion.div 
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={{
+              hidden: { opacity: 0, scale: 0.99, y: 10 },
+              visible: {
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                transition: {
+                  type: "spring",
+                  damping: 30,
+                  stiffness: 300,
+                  staggerChildren: 0.05,
+                  delayChildren: 0.1
+                }
+              }
+            }}
+            className="w-full max-w-4xl bg-[#181818] rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
+            style={{ willChange: 'transform, opacity' }}
+          >
+          {/* Close Button */}
           <button 
             onClick={onClose} 
-            className="absolute top-6 left-6 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors z-10 md:hidden"
+            className="absolute top-4 right-4 md:top-6 md:right-6 z-50 p-2 bg-black/40 hover:bg-white/10 text-white rounded-full transition-all backdrop-blur-md border border-white/10 active:scale-90"
           >
-            <ChevronLeft size={24} />
+            <X size={20} />
           </button>
 
-          <button 
-            onClick={onClose} 
-            className="absolute top-6 right-6 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors z-10"
-          >
-            <X size={24} />
-          </button>
-
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 flex items-end gap-6">
-            <div className="w-32 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 shrink-0">
-              <img src={movie.posterUrl} className="w-full h-full object-cover" alt={movie.title} referrerPolicy="no-referrer" />
+          {/* Hero Section */}
+          <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
+            {/* Poster Background */}
+            <div className="absolute inset-0 overflow-hidden">
+              <MoviePoster src={movie.posterUrl} alt="" className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" style={{ willChange: 'transform' }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent" />
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest bg-red-600 text-white px-3 py-1 rounded-full">
-                  {movie.category}
-                </span>
-                <div className="flex items-center gap-1.5 text-yellow-500 font-bold">
-                  <Star size={16} className="fill-current" />
-                  <span>{avgRating}</span>
-                </div>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold">{movie.title}</h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-white/10 px-6 md:px-8 shrink-0">
-          <button 
-            onClick={() => setActiveTab('info')}
-            className={`px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'info' ? 'border-red-600 text-white' : 'border-transparent text-white/40'}`}
-          >
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab('reviews')}
-            className={`px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'reviews' ? 'border-red-600 text-white' : 'border-transparent text-white/40'}`}
-          >
-            Reviews ({reviews.length})
-          </button>
-        </div>
-
-        <div id="movie-detail-content" className="relative flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-          <AnimatePresence mode="wait">
-            {isInitialLoading ? (
-              <motion.div 
-                key="modal-loader"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/50 backdrop-blur-sm"
+            
+            {/* Content Overlay */}
+            <div className="relative z-10 p-8 md:p-14 w-full">
+              <motion.h2 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="text-5xl md:text-7xl font-black mb-8 tracking-tighter text-white line-clamp-2 leading-[0.9]"
               >
-                <div className="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin mb-4" />
-                <p className="text-white/40 text-xs font-bold uppercase tracking-widest animate-pulse">Loading Movie Details...</p>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-
-          {activeTab === 'info' ? (
-            <div className="flex flex-col gap-10">
-              {/* Description & Actions */}
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold mb-3">Storyline</h3>
-                  <p className="text-white/70 leading-relaxed">{movie.description}</p>
-                </div>
-                <div className="w-full md:w-64 flex flex-col gap-3">
-                  {movie.viewUrl && (
-                    <a 
-                      href={movie.viewUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      onClick={() => onView(movie.id)}
-                      className="w-full bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600 hover:text-white transition-all"
-                    >
-                      <Play size={18} className="fill-current" /> Watch Now
-                    </a>
-                  )}
+                {movie.title}
+              </motion.h2>
+              
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="flex flex-wrap items-center gap-4"
+              >
+                {movie.viewUrl && (
                   <a 
-                    href={movie.url} 
+                    href={movie.viewUrl} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    onClick={() => onDownload(movie.id)}
-                    className="w-full bg-white/10 border border-white/10 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
+                    onClick={() => onView(movie.id)}
+                    className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg"
                   >
-                    <Download size={18} /> Download Movie
+                    <Play size={20} className="fill-current md:w-6 md:h-6" /> Play
                   </a>
-                </div>
-              </div>
-
-              {/* Cast & Crew */}
-              {(movie.director || movie.cast) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8 border-y border-white/5">
-                  {movie.director && (
-                    <div>
-                      <h3 className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">Director</h3>
-                      <p className="text-lg font-bold">{movie.director}</p>
-                    </div>
-                  )}
-                  {movie.cast && (
-                    <div>
-                      <h3 className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2">Top Cast</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {movie.cast.split(',').map((actor, i) => (
-                          <span key={i} className="bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-sm font-medium">
-                            {actor.trim()}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Similar Movies */}
-              {similarMovies.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-bold mb-6">You Might Also Like</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                    {similarMovies.map(m => (
-                      <div 
-                        key={m.id} 
-                        onClick={() => onMovieClick(m)}
-                        className="group cursor-pointer"
-                      >
-                        <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 mb-3 group-hover:ring-2 ring-red-600 transition-all">
-                          <img src={m.posterUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={m.title} referrerPolicy="no-referrer" />
-                        </div>
-                        <h4 className="font-bold text-sm truncate">{m.title}</h4>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-10">
-              {/* Review Form */}
-              <form onSubmit={handleSubmit} className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <h3 className="font-bold mb-6 text-lg">Share your thoughts</h3>
-                <div className="flex flex-col gap-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <input 
-                      type="text" 
-                      placeholder="Your Name" 
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-white/30 transition-colors"
-                      required
-                    />
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-white/60">Rating:</span>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setRating(star)}
-                            className="p-1 hover:scale-110 transition-transform"
-                          >
-                            <Star size={24} className={star <= rating ? "text-yellow-500 fill-yellow-500" : "text-white/20"} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <textarea 
-                    placeholder="Tell us what you liked or disliked about this movie..." 
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-white/30 transition-colors min-h-[120px] resize-none"
-                    required
-                  />
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 shadow-lg shadow-red-600/20"
-                  >
-                    {isSubmitting ? 'Posting...' : 'Post Review'}
-                  </button>
-                </div>
-              </form>
-
-              {/* Reviews List */}
-              <div className="flex flex-col gap-6">
-                <h3 className="font-bold text-lg">Community Reviews</h3>
-                {isReviewsLoading ? (
-                  <div className="text-center py-12 text-white/50">Loading reviews...</div>
-                ) : reviews.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="bg-white/5 rounded-2xl p-6 border border-white/5">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex flex-col">
-                            <span className="font-bold">{review.user_name}</span>
-                            {review.created_at && (
-                              <span className="text-[10px] text-white/40">
-                                {new Date(review.created_at).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} size={14} className={i < review.rating ? "text-yellow-500 fill-yellow-500" : "text-white/20"} />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-white/80 text-sm leading-relaxed">{review.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-white/50 bg-white/5 rounded-2xl border border-white/5 border-dashed">
-                    No reviews yet. Be the first to share your experience!
-                  </div>
                 )}
+                <a 
+                  href={movie.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  onClick={() => onDownload(movie.id)}
+                  className="bg-white/10 hover:bg-white/20 text-white px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg backdrop-blur-xl border border-white/10 active:scale-95"
+                >
+                  <Download size={20} className="md:w-6 md:h-6" /> Download
+                </a>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <motion.div 
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            className="p-6 md:p-14 pt-10 space-y-16"
+          >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Left Column: Metadata & Description */}
+            <div className="lg:col-span-2 space-y-8">
+              <div className="flex flex-wrap items-center gap-5 text-sm font-semibold tracking-wide">
+                <span className="text-green-500">98% Match</span>
+                <span className="text-white/50">{movie.created_at ? new Date(movie.created_at).getFullYear() : '2026'}</span>
+                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70">18+</span>
+                <span className="text-white/50">2h 15m</span>
+                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70 uppercase">HD</span>
+              </div>
+              
+              <p className="text-lg md:text-xl text-white/80 leading-relaxed font-light">
+                {movie.description}
+              </p>
+            </div>
+
+            {/* Right Column: Cast & Details */}
+            <div className="space-y-6 text-sm border-l border-white/5 pl-8 hidden lg:block">
+              {movie.cast && (
+                <div className="space-y-1">
+                  <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Cast</span>
+                  <span className="text-white/70 block leading-snug">{movie.cast}</span>
+                </div>
+              )}
+              {movie.director && (
+                <div className="space-y-1">
+                  <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Director</span>
+                  <span className="text-white/70 block leading-snug">{movie.director}</span>
+                </div>
+              )}
+              <div className="space-y-1">
+                <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Genres</span>
+                <span className="text-white/70 block leading-snug">{movie.category}</span>
+              </div>
+            </div>
+            
+            {/* Mobile Cast & Details */}
+            <div className="space-y-4 text-sm lg:hidden">
+              {movie.cast && (
+                <div>
+                  <span className="text-white/30">Cast: </span>
+                  <span className="text-white/70">{movie.cast}</span>
+                </div>
+              )}
+              {movie.director && (
+                <div>
+                  <span className="text-white/30">Director: </span>
+                  <span className="text-white/70">{movie.director}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-white/30">Genres: </span>
+                <span className="text-white/70">{movie.category}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* More Like This Section */}
+          {similarMovies.length > 0 && (
+            <div className="space-y-8">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight">More Like This</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
+                {similarMovies.map((m) => (
+                  <div 
+                    key={m.id} 
+                    onClick={() => onMovieClick(m)}
+                    className="bg-[#242424] rounded-lg overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
+                  >
+                    <div className="aspect-[16/9] relative overflow-hidden">
+                      <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:scale-110 transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-all" />
+                    </div>
+                    <div className="p-4 md:p-5 space-y-2 md:space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white/40">{m.created_at ? new Date(m.created_at).getFullYear() : '2026'}</span>
+                      </div>
+                      <h4 className="font-bold text-sm md:text-base truncate text-white/90">{m.title}</h4>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
+
+          {/* Reviews Section */}
+          <div className="space-y-12 border-t border-white/5 pt-16">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold tracking-tight text-white">User Reviews</h3>
+              <div className="flex items-center gap-2 text-white/40 text-sm">
+                <Star size={16} className="text-white fill-current" />
+                <span className="font-bold text-white">4.8</span>
+                <span>(1.2k reviews)</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="bg-white/[0.02] rounded-2xl p-8 border border-white/5">
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Your Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter your name" 
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-5 py-4 focus:outline-none focus:border-white/20 transition-all text-white placeholder:text-white/20"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Your Rating</label>
+                    <div className="flex items-center gap-3 h-[58px]">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="transition-all hover:scale-125 active:scale-90"
+                        >
+                          <Star size={24} className={star <= rating ? "text-white fill-current" : "text-white/5"} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Your Review</label>
+                  <textarea 
+                    placeholder="Share your thoughts on this movie..." 
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-5 py-4 focus:outline-none focus:border-white/20 transition-all min-h-[120px] resize-none text-white placeholder:text-white/20"
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-white text-black font-black py-4 px-10 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50 active:scale-95 text-lg shadow-xl"
+                >
+                  {isSubmitting ? 'Posting...' : 'Submit Review'}
+                </button>
+              </div>
+            </form>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {reviews.map((review) => (
+                <div 
+                  key={review.id} 
+                  className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 hover:border-white/10 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center font-bold text-white/40 border border-white/5">
+                        {review.user_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-bold text-base block text-white/90">{review.user_name}</span>
+                        <span className="text-[10px] text-white/20 uppercase tracking-widest font-bold">{new Date(review.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} size={14} className={i < review.rating ? "text-white fill-current" : "text-white/5"} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-white/60 text-base leading-relaxed italic">"{review.text}"</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          </motion.div>
+          </motion.div>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 
