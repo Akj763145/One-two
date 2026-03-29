@@ -1,26 +1,32 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
-const AdsterraNativeBanner: React.FC = () => {
-  const adRef = useRef<HTMLDivElement>(null);
+export default function AdsterraNativeBanner() {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (adRef.current && !adRef.current.firstChild) {
-      const script = document.createElement('script');
-      script.async = true;
-      script.dataset.cfasync = "false";
-      script.src = "//www.highperformanceformat.com/48fc53489149f9fac60634e87fd9f134/invoke.js";
-      
-      adRef.current.appendChild(script);
-    }
+    if (!containerRef.current) return;
+    
+    // Clear previous content to prevent duplicates on re-renders
+    containerRef.current.innerHTML = '';
+    
+    // 1. Create the target div required by Adsterra
+    const adDiv = document.createElement('div');
+    adDiv.id = 'container-b95d3413c778940adc31e43de1fb52de';
+    containerRef.current.appendChild(adDiv);
+
+    // 2. Create and append the script
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.dataset.cfasync = 'false';
+    script.src = 'https://pl28944897.profitablecpmratenetwork.com/b95d3413c778940adc31e43de1fb52de/invoke.js';
+    
+    containerRef.current.appendChild(script);
   }, []);
 
   return (
-    <div 
-      ref={adRef} 
-      className="w-full min-h-[250px] bg-zinc-900/50 rounded-xl overflow-hidden flex items-center justify-center"
-      id="container-48fc53489149f9fac60634e87fd9f134"
-    />
+    <div className="w-full flex justify-center my-8 overflow-hidden min-h-[100px]">
+      <div ref={containerRef} className="w-full max-w-4xl flex justify-center"></div>
+    </div>
   );
-};
-
-export default AdsterraNativeBanner;
+}
