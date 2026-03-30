@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3 } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Facebook, Twitter, MessageCircle } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
@@ -1408,7 +1408,7 @@ const MovieDetailModal: React.FC<{
                 }
               }
             }}
-            className="w-full max-w-4xl bg-[#181818] rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
+            className="w-full max-w-4xl bg-black rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
             style={{ willChange: 'transform, opacity' }}
           >
           {/* Close Button */}
@@ -1424,7 +1424,7 @@ const MovieDetailModal: React.FC<{
             {/* Poster Background */}
             <div className="absolute inset-0 overflow-hidden">
               <MoviePoster src={movie.posterUrl} alt="" className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" style={{ willChange: 'transform' }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             </div>
             
             {/* Content Overlay */}
@@ -1466,6 +1466,19 @@ const MovieDetailModal: React.FC<{
                 >
                   <Download size={20} className="md:w-6 md:h-6" /> Download
                 </a>
+                
+                {/* Social Sharing */}
+                <div className="flex items-center gap-2 ml-2">
+                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
+                    <Facebook size={20} />
+                  </a>
+                  <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(movie.title)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
+                    <Twitter size={20} />
+                  </a>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(movie.title + ' ' + window.location.href)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
+                    <MessageCircle size={20} />
+                  </a>
+                </div>
               </motion.div>
             </div>
           </div>
