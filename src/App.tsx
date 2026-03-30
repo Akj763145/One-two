@@ -394,22 +394,30 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const movieId = params.get('movie');
-    if (movieId && movies.length > 0) {
+    if (movieId && movies.length > 0 && !selectedMovieForDetails) {
       const movie = movies.find(m => m.id === movieId);
       if (movie) {
         setSelectedMovieForDetails(movie);
       }
     }
-  }, [movies]);
+  }, [movies, selectedMovieForDetails]);
 
-  // Clean up URL when modal closes
+  // Sync URL with selected movie and clean up
   useEffect(() => {
-    if (!selectedMovieForDetails) {
-      const url = new URL(window.location.href);
+    const url = new URL(window.location.href);
+    const currentMovieId = url.searchParams.get('movie');
+    
+    if (selectedMovieForDetails) {
+      if (currentMovieId !== selectedMovieForDetails.id) {
+        url.searchParams.set('movie', selectedMovieForDetails.id);
+        window.history.replaceState({}, '', url);
+      }
+    } else if (currentMovieId && !isLoading) {
+      // Only remove if we are not loading and no movie is selected
       url.searchParams.delete('movie');
       window.history.replaceState({}, '', url);
     }
-  }, [selectedMovieForDetails]);
+  }, [selectedMovieForDetails, isLoading]);
 
   // Handle browser back button to close movie details modal
   useEffect(() => {
