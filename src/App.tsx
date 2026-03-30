@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -350,6 +350,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
+  const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [adminView, setAdminView] = useState<'all' | 'featured'>('all');
@@ -390,17 +391,20 @@ export default function App() {
     }
   }, [movies]);
 
-  // Handle URL query parameter to open movie details modal
+  // Handle URL query parameter to open movie details modal (Initial load only)
   useEffect(() => {
+    if (hasHandledInitialUrl.current || movies.length === 0) return;
+    
     const params = new URLSearchParams(window.location.search);
     const movieId = params.get('movie');
-    if (movieId && movies.length > 0 && !selectedMovieForDetails) {
+    if (movieId && !selectedMovieForDetails) {
       const movie = movies.find(m => m.id === movieId);
       if (movie) {
         setSelectedMovieForDetails(movie);
+        hasHandledInitialUrl.current = true;
       }
     }
-  }, [movies, selectedMovieForDetails]);
+  }, [movies]);
 
   // Sync URL with selected movie and clean up
   useEffect(() => {
@@ -427,10 +431,20 @@ export default function App() {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedMovieForDetails) {
+        if (window.history.state?.modal === 'movie-details') {
+          window.history.back();
+        }
+        setSelectedMovieForDetails(null);
+      }
+    };
+
     if (selectedMovieForDetails) {
       // Push a new state when the modal opens
       window.history.pushState({ modal: 'movie-details' }, '');
       window.addEventListener('popstate', handlePopState);
+      window.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -438,6 +452,7 @@ export default function App() {
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
   }, [selectedMovieForDetails !== null]);
@@ -708,6 +723,12 @@ export default function App() {
                               <Play size={18} className="fill-current" /> Watch Now
                             </a>
                           )}
+                          <button 
+                            onClick={() => setSelectedMovieForDetails(movie)}
+                            className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95"
+                          >
+                            <Info size={18} /> More Info
+                          </button>
                           <a 
                             href={movie.url} 
                             target="_blank" 
@@ -1092,22 +1113,24 @@ export default function App() {
           </motion.div>
         )}
 
-        {selectedMovieForDetails && (
-          <MovieDetailModal 
-            key={selectedMovieForDetails.id} 
-            movie={selectedMovieForDetails} 
-            allMovies={movies}
-            onClose={() => {
-              if (window.history.state?.modal === 'movie-details') {
-                window.history.back();
-              }
-              setSelectedMovieForDetails(null);
-            }} 
-            onMovieClick={(m) => setSelectedMovieForDetails(m)}
-            onDownload={handleDownload}
-            onView={handleView}
-          />
-        )}
+        <AnimatePresence>
+          {selectedMovieForDetails && (
+            <MovieDetailModal 
+              key={selectedMovieForDetails.id} 
+              movie={selectedMovieForDetails} 
+              allMovies={movies}
+              onClose={() => {
+                if (window.history.state?.modal === 'movie-details') {
+                  window.history.back();
+                }
+                setSelectedMovieForDetails(null);
+              }} 
+              onMovieClick={(m) => setSelectedMovieForDetails(m)}
+              onDownload={handleDownload}
+              onView={handleView}
+            />
+          )}
+        </AnimatePresence>
 
         {movieToDelete && (
           <motion.div key="delete-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
@@ -1207,16 +1230,21 @@ const MovieCard: React.FC<{
         >
           <MoviePoster src={movie.posterUrl} alt={movie.title} contain autoHeight className="group-hover:scale-105 transition-transform duration-500" />
           
+          {/* Persistent Info Icon for Discoverability */}
+          <div className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white/70 group-hover:text-white group-hover:bg-red-600 transition-all duration-300 shadow-lg">
+            <Info size={14} />
+          </div>
+          
           {/* Tooltip */}
           <div className="absolute inset-0 z-10 hidden group-hover:flex flex-col justify-end p-4 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-            <h4 className="text-white font-bold text-sm mb-1">{movie.title}</h4>
-            <p className="text-white/70 text-xs line-clamp-3 mb-2">{movie.description}</p>
-            {(movie.director || movie.cast) && (
-              <div className="text-white/50 text-[10px]">
-                {movie.director && <p>Director: {movie.director}</p>}
-                {movie.cast && <p>Cast: {movie.cast}</p>}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <Info size={14} className="text-white" />
               </div>
-            )}
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Click for details</span>
+            </div>
+            <h4 className="text-white font-bold text-sm mb-1">{movie.title}</h4>
+            <p className="text-white/70 text-xs line-clamp-2 mb-2">{movie.description}</p>
           </div>
         </div>
       </div>
@@ -1279,9 +1307,9 @@ const MovieCard: React.FC<{
           
           <button 
             onClick={() => onShowDetails(movie)}
-            className="w-full bg-white/5 hover:bg-white/10 text-white/80 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+            className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/5"
           >
-            <Eye size={14} className="text-blue-400" /> View Details
+            <Info size={14} className="text-emerald-400" /> Full Movie Details
           </button>
 
           {isAdmin && (
@@ -1466,14 +1494,6 @@ const MovieDetailModal: React.FC<{
             className="w-full max-w-4xl bg-black rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
             style={{ willChange: 'transform, opacity' }}
           >
-          {/* Close Button */}
-          <button 
-            onClick={onClose} 
-            className="absolute top-4 right-4 md:top-6 md:right-6 z-50 p-2 bg-black/40 hover:bg-white/10 text-white rounded-full transition-all backdrop-blur-md border border-white/10 active:scale-90"
-          >
-            <X size={20} />
-          </button>
-
           {/* Hero Section */}
           <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
             {/* Poster Background */}
@@ -1535,6 +1555,14 @@ const MovieDetailModal: React.FC<{
               </motion.div>
             </div>
           </div>
+
+          {/* Close Button - Moved after Hero to ensure it's on top */}
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 md:top-6 md:right-6 z-[60] p-2 bg-black/40 hover:bg-white/10 text-white rounded-full transition-all backdrop-blur-md border border-white/10 active:scale-90"
+          >
+            <X size={20} />
+          </button>
 
           {/* Content Section */}
           <motion.div 
