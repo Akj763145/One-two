@@ -1171,14 +1171,25 @@ const MovieCard: React.FC<{
       transition={{ duration: 0.2, ease: "easeOut" }}
       className="flex flex-col gap-3 group w-full"
     >
-      <div 
-        onClick={() => onShowDetails(movie)}
-        className="relative rounded-2xl overflow-hidden w-full bg-white/5 shadow-xl ring-1 ring-white/10 group-hover:ring-white/30 transition-all cursor-pointer"
-      >
-        <MoviePoster src={movie.posterUrl} alt={movie.title} contain autoHeight className="group-hover:scale-105 transition-transform duration-500" />
-        
-        {/* Subtle overlay on hover */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      <div className="p-[1px] rounded-2xl bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
+        <div 
+          onClick={() => onShowDetails(movie)}
+          className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer"
+        >
+          <MoviePoster src={movie.posterUrl} alt={movie.title} contain autoHeight className="group-hover:scale-105 transition-transform duration-500" />
+          
+          {/* Tooltip */}
+          <div className="absolute inset-0 z-10 hidden group-hover:flex flex-col justify-end p-4 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+            <h4 className="text-white font-bold text-sm mb-1">{movie.title}</h4>
+            <p className="text-white/70 text-xs line-clamp-3 mb-2">{movie.description}</p>
+            {(movie.director || movie.cast) && (
+              <div className="text-white/50 text-[10px]">
+                {movie.director && <p>Director: {movie.director}</p>}
+                {movie.cast && <p>Cast: {movie.cast}</p>}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2.5 px-1">
