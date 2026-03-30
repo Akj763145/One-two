@@ -357,6 +357,7 @@ export default function App() {
   const [adminView, setAdminView] = useState<'all' | 'featured'>('all');
   
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [showGoToTop, setShowGoToTop] = useState(false);
   const [formData, setFormData] = useState({
     title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
     release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
@@ -366,7 +367,17 @@ export default function App() {
     // Force dark mode
     document.documentElement.classList.add('dark');
     fetchMovies();
+
+    const handleScroll = () => {
+      setShowGoToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (!supabase) {
@@ -1214,6 +1225,22 @@ export default function App() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Go to Top Button */}
+      <AnimatePresence>
+        {showGoToTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            onClick={scrollToTop}
+            className="fixed bottom-8 right-8 z-[90] w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-2xl shadow-red-600/40 hover:bg-red-700 transition-all active:scale-90 border border-white/10"
+            title="Go to Top"
+          >
+            <ChevronRight className="-rotate-90" size={24} />
+          </motion.button>
         )}
       </AnimatePresence>
     </div>
