@@ -25,6 +25,7 @@ interface Movie {
   downloads?: number;
   views?: number;
   is_hero?: boolean;
+  is_trending?: boolean;
   release_year?: string;
   maturity_rating?: string;
   duration?: string;
@@ -47,7 +48,7 @@ const INITIAL_MOVIES: Movie[] = [
     title: 'The raja Saab',
     url: '#',
     viewUrl: '#',
-    posterUrl: 'https://picsum.photos/seed/raja/600/900',
+    posterUrl: 'https://picsum.photos/seed/raja/300/450',
     description: 'Download now',
     category: 'Action',
     downloads: 0,
@@ -357,7 +358,7 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '',
+    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
     release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
   });
 
@@ -376,19 +377,31 @@ export default function App() {
   useEffect(() => {
     const heroMovies = movies.filter(m => m.is_hero);
     const featured = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
-    if (featured.length > 0) {
+    
+    // Preload the first 2 featured images with high priority
+    const preloadImages = featured.slice(0, 2);
+    const links: HTMLLinkElement[] = [];
+
+    preloadImages.forEach((movie, index) => {
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
-      link.href = featured[0].posterUrl;
-      // @ts-ignore
-      link.fetchPriority = 'high';
+      link.href = movie.posterUrl;
+      if (index === 0) {
+        // @ts-ignore
+        link.fetchPriority = 'high';
+      }
       document.head.appendChild(link);
-      
-      return () => {
-        document.head.removeChild(link);
-      };
-    }
+      links.push(link);
+    });
+    
+    return () => {
+      links.forEach(link => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      });
+    };
   }, [movies]);
 
   // Handle URL query parameter to open movie details modal (Initial load only)
@@ -557,7 +570,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
+    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
     setEditingMovie(null);
   };
 
@@ -568,6 +581,7 @@ export default function App() {
       posterUrl: movie.posterUrl, description: movie.description,
       category: movie.category || 'Other',
       is_hero: movie.is_hero || false,
+      is_trending: movie.is_trending || false,
       director: movie.director || '',
       cast: movie.cast || '',
       release_year: movie.release_year || '',
@@ -641,7 +655,7 @@ export default function App() {
 
   const heroMovies = movies.filter(m => m.is_hero);
   const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
-  const trendingMovies = movies.slice(0, 10);
+  const trendingMovies = movies.filter(m => m.is_trending);
 
   return (
     <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
@@ -656,7 +670,7 @@ export default function App() {
         onLogout={() => { setIsAdmin(false); setAdminView('all'); }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
         setIsSearchActive={(active) => {
           if (!active && window.history.state?.modal === 'search') {
@@ -738,9 +752,9 @@ export default function App() {
                   modules={[EffectCoverflow, Autoplay, Pagination, Mousewheel]}
                   className="hero-swiper w-full h-full !px-4 md:!px-20"
                 >
-                  {featuredMovies.map((movie) => (
+                  {featuredMovies.map((movie, index) => (
                     <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
-                      <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img" />
+                      <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img" priority={index === 0} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
                       
                       <motion.div 
@@ -1136,6 +1150,16 @@ export default function App() {
                           <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on homepage slider</p>
                         </div>
                       </div>
+
+                      <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all" onClick={() => setFormData({...formData, is_trending: !formData.is_trending})}>
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.is_trending ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
+                          {formData.is_trending && <Plus size={16} className="text-white rotate-45" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-current">Show in Trending Section</p>
+                          <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on trending row</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1197,7 +1221,14 @@ export default function App() {
 }
 
 // Reusable Movie Poster Component with Fallback
-const MoviePoster: React.FC<{ src: string; alt: string; className?: string; contain?: boolean; autoHeight?: boolean }> = ({ src, alt, className = "", contain = false, autoHeight = false }) => {
+const MoviePoster: React.FC<{ 
+  src: string; 
+  alt: string; 
+  className?: string; 
+  contain?: boolean; 
+  autoHeight?: boolean;
+  priority?: boolean;
+}> = ({ src, alt, className = "", contain = false, autoHeight = false, priority = false }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -1226,9 +1257,11 @@ const MoviePoster: React.FC<{ src: string; alt: string; className?: string; cont
           alt={alt} 
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          className={`w-full ${autoHeight ? 'h-auto' : 'h-full'} ${contain ? 'object-contain' : 'object-cover'} transition-all duration-500 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`} 
+          className={`w-full ${autoHeight ? 'h-auto' : 'h-full'} ${contain ? 'object-contain' : 'object-cover'} transition-all duration-300 ${priority || isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`} 
           referrerPolicy="no-referrer"
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          // @ts-ignore
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
         />
       )}
@@ -1536,7 +1569,7 @@ const MovieDetailModal: React.FC<{
           <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
             {/* Poster Background */}
             <div className="absolute inset-0 overflow-hidden">
-              <MoviePoster src={movie.posterUrl} alt="" className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" style={{ willChange: 'transform' }} />
+              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" style={{ willChange: 'transform' }} />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             </div>
             

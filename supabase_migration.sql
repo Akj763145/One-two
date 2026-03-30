@@ -1,1 +1,2 @@
 ALTER TABLE movies ADD COLUMN category TEXT DEFAULT 'Other';
+ALTER TABLE movies ADD COLUMN is_trending BOOLEAN DEFAULT false;
