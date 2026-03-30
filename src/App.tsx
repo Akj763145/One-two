@@ -140,8 +140,11 @@ const Navbar: React.FC<{
   const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 50;
+      setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -369,9 +372,10 @@ export default function App() {
     fetchMovies();
 
     const handleScroll = () => {
-      setShowGoToTop(window.scrollY > 400);
+      const shouldShow = window.scrollY > 400;
+      setShowGoToTop(prev => prev !== shouldShow ? shouldShow : prev);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -878,7 +882,7 @@ export default function App() {
                 <>
                   {/* Trending Row */}
                   {trendingMovies.length > 0 && (
-                    <div className="mb-12">
+                    <div className="mb-12 content-visibility-auto contain-intrinsic-size-[200px]">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl md:text-2xl font-bold tracking-tight">Trending Now</h2>
                         <button 
@@ -922,7 +926,7 @@ export default function App() {
                   </div>
 
                   {/* All Movies Grid */}
-                  <div id="watch-next" className="mb-12 scroll-mt-24">
+                  <div id="watch-next" className="mb-12 scroll-mt-24 content-visibility-auto contain-intrinsic-size-[500px]">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl md:text-2xl font-bold tracking-tight">Watch Next</h2>
                     </div>
@@ -1319,7 +1323,7 @@ const MovieCard: React.FC<{
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="flex flex-col gap-3 group w-full"
+      className="flex flex-col gap-3 group w-full will-change-transform"
     >
       <div className="p-[1px] rounded-2xl bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
         <div 
