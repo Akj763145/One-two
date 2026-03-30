@@ -457,6 +457,38 @@ export default function App() {
     };
   }, [selectedMovieForDetails !== null]);
 
+  // Handle browser back button to close search
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (isSearchActive) {
+        setIsSearchActive(false);
+        setSearchQuery('');
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSearchActive) {
+        if (window.history.state?.modal === 'search') {
+          window.history.back();
+        }
+        setIsSearchActive(false);
+        setSearchQuery('');
+      }
+    };
+
+    if (isSearchActive) {
+      // Push a new state when search opens
+      window.history.pushState({ modal: 'search' }, '');
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSearchActive]);
+
   // Also lock scroll for other modals
   useEffect(() => {
     if (showAddEditModal || showDMCA || showAdminLogin || movieToDelete) {
@@ -626,7 +658,13 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
         isSearchActive={isSearchActive}
-        setIsSearchActive={setIsSearchActive}
+        setIsSearchActive={(active) => {
+          if (!active && window.history.state?.modal === 'search') {
+            window.history.back();
+          }
+          setIsSearchActive(active);
+          if (!active) setSearchQuery('');
+        }}
         movies={movies}
         onDMCAClick={() => setShowDMCA(true)}
         adminView={adminView}
