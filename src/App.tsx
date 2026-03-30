@@ -151,8 +151,8 @@ const Navbar: React.FC<{
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 md:px-16 py-4 flex items-center justify-between ${
       isScrolled 
-        ? 'bg-black/90 backdrop-blur-2xl border-b border-white/10 py-3' 
-        : 'bg-black/40 backdrop-blur-md border-b border-white/5'
+        ? 'bg-black/95 border-b border-white/10 py-3' 
+        : 'bg-black/60 border-b border-white/5'
     }`}>
       <div className={`flex items-center gap-8 md:gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); setActiveCategory('All'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
@@ -848,15 +848,13 @@ export default function App() {
                     <div className="flex-1">
                       {currentMovies.length > 0 ? (
                         <div className="flex flex-col gap-12">
-                          <motion.div 
-                            initial="hidden"
-                            animate="visible"
+                          <div 
                             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
                           >
                             {currentMovies.map(movie => (
                               <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                             ))}
-                          </motion.div>
+                          </div>
                         </div>
                       ) : (
                         <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
@@ -904,12 +902,7 @@ export default function App() {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <motion.div
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                            >
-                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
-                            </motion.div>
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -928,23 +921,13 @@ export default function App() {
                     </div>
                     <div className="flex flex-col lg:flex-row gap-8">
                       <div className="flex-1 flex flex-col gap-12">
-                        <motion.div 
-                          initial="hidden"
-                          animate="visible"
+                        <div 
                           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
                         >
                           {currentMovies.map((movie) => (
-                            <motion.div
-                              key={movie.id}
-                              variants={{
-                                hidden: { opacity: 0, y: 20 },
-                                visible: { opacity: 1, y: 0 }
-                              }}
-                            >
-                              <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
-                            </motion.div>
+                            <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                           ))}
-                        </motion.div>
+                        </div>
                       </div>
                       
                       {/* 160x300 Vertical Banner Ad */}
@@ -1305,17 +1288,10 @@ const MovieCard: React.FC<{
   const matchesDirector = query && movie.director?.toLowerCase().includes(query);
 
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, y: 15 },
-        visible: { opacity: 1, y: 0 }
-      }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="flex flex-col gap-3 group w-full"
+    <div
+      className="flex flex-col gap-3 group w-full transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
     >
-      <div className="p-[1px] rounded-2xl bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
+      <div className="rounded-2xl bg-zinc-900 overflow-hidden shadow-lg">
         <div 
           onClick={() => onShowDetails(movie)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
@@ -1323,14 +1299,14 @@ const MovieCard: React.FC<{
           <MoviePoster src={movie.posterUrl} alt={movie.title} className="group-hover:scale-105 transition-transform duration-500" />
           
           {/* Persistent Info Icon for Discoverability */}
-          <div className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white/70 group-hover:text-white group-hover:bg-red-600 transition-all duration-300 shadow-lg">
+          <div className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/80 border border-white/10 text-white/70 group-hover:text-white group-hover:bg-red-600 transition-all duration-300 shadow-lg">
             <Info size={14} />
           </div>
           
           {/* Tooltip */}
-          <div className="absolute inset-0 z-10 hidden group-hover:flex flex-col justify-end p-4 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+          <div className="absolute inset-0 z-10 hidden group-hover:flex flex-col justify-end p-4 bg-gradient-to-t from-black/95 to-transparent pointer-events-none">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                 <Info size={14} className="text-white" />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Click for details</span>
@@ -1428,7 +1404,7 @@ const MovieCard: React.FC<{
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 });
 const MovieDetailModal: React.FC<{ 

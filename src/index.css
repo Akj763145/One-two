@@ -26,16 +26,16 @@
 
 @layer utilities {
   .glass-nav {
-    @apply bg-black/50 backdrop-blur-2xl border-b border-white/10;
+    @apply bg-black/95 border-b border-white/10;
   }
   .glass-panel {
-    @apply bg-white/10 backdrop-blur-xl border border-white/10;
+    @apply bg-zinc-900 border border-white/10;
   }
   .apple-btn-primary {
     @apply bg-white text-black font-semibold rounded-full px-6 py-2.5 hover:scale-105 transition-transform duration-300 flex items-center gap-2;
   }
   .apple-btn-secondary {
-    @apply bg-white/20 text-white font-semibold rounded-full px-6 py-2.5 hover:bg-white/30 hover:scale-105 transition-all duration-300 flex items-center gap-2 backdrop-blur-md border border-white/10;
+    @apply bg-white/20 text-white font-semibold rounded-full px-6 py-2.5 hover:bg-white/30 hover:scale-105 transition-all duration-300 flex items-center gap-2 border border-white/10;
   }
   .text-shadow-lg {
     text-shadow: 0 4px 12px rgba(0,0,0,0.5);
