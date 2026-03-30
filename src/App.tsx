@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Facebook, Twitter, MessageCircle } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
@@ -389,6 +389,27 @@ export default function App() {
       };
     }
   }, [movies]);
+
+  // Handle URL query parameter to open movie details modal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const movieId = params.get('movie');
+    if (movieId && movies.length > 0) {
+      const movie = movies.find(m => m.id === movieId);
+      if (movie) {
+        setSelectedMovieForDetails(movie);
+      }
+    }
+  }, [movies]);
+
+  // Clean up URL when modal closes
+  useEffect(() => {
+    if (!selectedMovieForDetails) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('movie');
+      window.history.replaceState({}, '', url);
+    }
+  }, [selectedMovieForDetails]);
 
   // Handle browser back button to close movie details modal
   useEffect(() => {
@@ -1296,6 +1317,32 @@ const MovieDetailModal: React.FC<{
   const [rating, setRating] = useState(5);
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: movie.title,
+          text: `Check out ${movie.title} on MovieWallah!`,
+          url: shareUrl,
+        });
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowCopiedToast(true);
+        setTimeout(() => setShowCopiedToast(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy link:', err);
+      }
+    }
+  };
 
   const fetchReviews = useCallback(async () => {
     setIsReviewsLoading(true);
@@ -1469,15 +1516,13 @@ const MovieDetailModal: React.FC<{
                 
                 {/* Social Sharing */}
                 <div className="flex items-center gap-2 ml-2">
-                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
-                    <Facebook size={20} />
-                  </a>
-                  <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(movie.title)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
-                    <Twitter size={20} />
-                  </a>
-                  <a href={`https://wa.me/?text=${encodeURIComponent(movie.title + ' ' + window.location.href)}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all">
-                    <MessageCircle size={20} />
-                  </a>
+                  <button 
+                    onClick={handleShare}
+                    className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all font-bold text-sm border border-white/5 active:scale-95"
+                  >
+                    <Share2 size={20} />
+                    Share
+                  </button>
                 </div>
               </motion.div>
             </div>
@@ -1667,6 +1712,20 @@ const MovieDetailModal: React.FC<{
           </motion.div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showCopiedToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-6 py-3 rounded-full font-bold shadow-2xl flex items-center gap-2"
+          >
+            <Link size={16} />
+            Link Copied to Clipboard
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
