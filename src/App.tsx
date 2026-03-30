@@ -851,9 +851,6 @@ export default function App() {
                           <motion.div 
                             initial="hidden"
                             animate="visible"
-                            variants={{
-                              visible: { transition: { staggerChildren: 0.05 } }
-                            }}
                             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
                           >
                             {currentMovies.map(movie => (
@@ -905,12 +902,11 @@ export default function App() {
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
-                        {trendingMovies.map((movie, idx) => (
+                        {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
                             <motion.div
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: idx * 0.05 }}
                             >
                               <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                             </motion.div>
@@ -935,9 +931,6 @@ export default function App() {
                         <motion.div 
                           initial="hidden"
                           animate="visible"
-                          variants={{
-                            visible: { transition: { staggerChildren: 0.05 } }
-                          }}
                           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
                         >
                           {currentMovies.map((movie) => (
@@ -1269,11 +1262,9 @@ const MoviePoster: React.FC<{
   }, [src]);
 
   return (
-    <div className={`relative w-full aspect-[2/3] bg-zinc-800/50 overflow-hidden ${className}`}>
+    <div className={`relative w-full aspect-[2/3] bg-zinc-900 overflow-hidden ${className}`}>
       {(!isLoaded && !hasError) && (
-        <div className="absolute inset-0 bg-zinc-800/80 flex items-center justify-center z-10">
-          <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
-        </div>
+        <div className="absolute inset-0 shimmer z-10" />
       )}
       
       {(hasError || !src) ? (
@@ -1322,7 +1313,7 @@ const MovieCard: React.FC<{
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="flex flex-col gap-3 group w-full will-change-transform"
+      className="flex flex-col gap-3 group w-full"
     >
       <div className="p-[1px] rounded-2xl bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
         <div 
@@ -1593,13 +1584,12 @@ const MovieDetailModal: React.FC<{
               }
             }}
             className="w-full max-w-4xl bg-black rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
-            style={{ willChange: 'transform, opacity' }}
           >
           {/* Hero Section */}
           <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
             {/* Poster Background */}
             <div className="absolute inset-0 overflow-hidden">
-              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" style={{ willChange: 'transform' }} />
+              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             </div>
             
