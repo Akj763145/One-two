@@ -10,6 +10,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Prevent layout shifts from scrollbar appearing/disappearing */
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-black text-white antialiased selection:bg-red-500/30;
@@ -17,19 +19,9 @@
     overscroll-behavior: contain;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Optimize for scrolling performance */
+    text-rendering: optimizeLegibility;
   }
-}
-
-.content-visibility-auto {
-  content-visibility: auto;
-}
-
-.contain-intrinsic-size-\[200px\] {
-  contain-intrinsic-size: 200px;
-}
-
-.contain-intrinsic-size-\[500px\] {
-  contain-intrinsic-size: 500px;
 }
 
 @layer utilities {

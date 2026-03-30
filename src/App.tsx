@@ -882,7 +882,7 @@ export default function App() {
                 <>
                   {/* Trending Row */}
                   {trendingMovies.length > 0 && (
-                    <div className="mb-12 content-visibility-auto contain-intrinsic-size-[200px]">
+                    <div className="mb-12">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl md:text-2xl font-bold tracking-tight">Trending Now</h2>
                         <button 
@@ -926,7 +926,7 @@ export default function App() {
                   </div>
 
                   {/* All Movies Grid */}
-                  <div id="watch-next" className="mb-12 scroll-mt-24 content-visibility-auto contain-intrinsic-size-[500px]">
+                  <div id="watch-next" className="mb-12 scroll-mt-24">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl md:text-2xl font-bold tracking-tight">Watch Next</h2>
                     </div>
@@ -1257,9 +1257,8 @@ const MoviePoster: React.FC<{
   alt: string; 
   className?: string; 
   contain?: boolean; 
-  autoHeight?: boolean;
   priority?: boolean;
-}> = ({ src, alt, className = "", contain = false, autoHeight = false, priority = false }) => {
+}> = ({ src, alt, className = "", contain = false, priority = false }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -1270,15 +1269,15 @@ const MoviePoster: React.FC<{
   }, [src]);
 
   return (
-    <div className={`relative w-full ${autoHeight ? 'h-auto' : 'h-full'} bg-zinc-800/50 overflow-hidden ${className}`}>
+    <div className={`relative w-full aspect-[2/3] bg-zinc-800/50 overflow-hidden ${className}`}>
       {(!isLoaded && !hasError) && (
-        <div className={`${autoHeight ? 'aspect-[2/3]' : 'absolute inset-0'} bg-zinc-800/80 flex items-center justify-center z-10`}>
+        <div className="absolute inset-0 bg-zinc-800/80 flex items-center justify-center z-10">
           <div className="w-8 h-8 border-2 border-white/10 border-t-red-600 rounded-full animate-spin" />
         </div>
       )}
       
       {(hasError || !src) ? (
-        <div className={`${autoHeight ? 'aspect-[2/3]' : 'absolute inset-0'} flex flex-col items-center justify-center bg-zinc-900 text-white/20 p-4 text-center z-10`}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-white/20 p-4 text-center z-10">
           <Film size={40} className="mb-2 opacity-20" />
           <span className="text-[9px] font-black uppercase tracking-widest opacity-40">No Poster</span>
         </div>
@@ -1288,7 +1287,7 @@ const MoviePoster: React.FC<{
           alt={alt} 
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          className={`w-full ${autoHeight ? 'h-auto' : 'h-full'} ${contain ? 'object-contain' : 'object-cover'} transition-all duration-300 ${priority || isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`} 
+          className={`w-full h-full ${contain ? 'object-contain' : 'object-cover'} transition-opacity duration-300 ${priority || isLoaded ? 'opacity-100' : 'opacity-0'}`} 
           referrerPolicy="no-referrer"
           loading={priority ? "eager" : "lazy"}
           // @ts-ignore
@@ -1328,9 +1327,9 @@ const MovieCard: React.FC<{
       <div className="p-[1px] rounded-2xl bg-gradient-to-r from-red-500 to-red-900 shadow-xl shadow-red-500/10">
         <div 
           onClick={() => onShowDetails(movie)}
-          className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer"
+          className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
-          <MoviePoster src={movie.posterUrl} alt={movie.title} contain autoHeight className="group-hover:scale-105 transition-transform duration-500" />
+          <MoviePoster src={movie.posterUrl} alt={movie.title} className="group-hover:scale-105 transition-transform duration-500" />
           
           {/* Persistent Info Icon for Discoverability */}
           <div className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white/70 group-hover:text-white group-hover:bg-red-600 transition-all duration-300 shadow-lg">
