@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2 } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
@@ -571,16 +572,24 @@ export default function App() {
     } else {
       if (editingMovie) {
         const { error } = await supabase.from('movies').update(movieData).eq('id', editingMovie.id);
-        if (error) return setErrorMsg('Error updating movie: ' + error.message);
+        if (error) {
+          toast.error('Error updating movie: ' + error.message);
+          return setErrorMsg('Error updating movie: ' + error.message);
+        }
         setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+        toast.success('Movie updated successfully');
       } else {
         const { data, error } = await supabase.from('movies').insert([movieData]).select('*');
-        if (error) return setErrorMsg('Error adding movie: ' + error.message);
+        if (error) {
+          toast.error('Error adding movie: ' + error.message);
+          return setErrorMsg('Error adding movie: ' + error.message);
+        }
         if (data && data.length > 0) setMovies([...data, ...movies]);
         else {
           setMovies([{ ...movieData, id: Date.now().toString(), downloads: 0, views: 0 }, ...movies]);
           fetchMovies();
         }
+        toast.success('Movie added successfully');
       }
     }
     
@@ -615,6 +624,7 @@ export default function App() {
     if (supabase) await supabase.from('movies').delete().eq('id', movieToDelete);
     setMovies(movies.filter(m => m.id !== movieToDelete));
     setMovieToDelete(null);
+    toast.success('Movie deleted successfully');
   };
 
   const handleDownload = async (movieId: string) => {
@@ -623,6 +633,7 @@ export default function App() {
 
     const newDownloads = (movie.downloads || 0) + 1;
     setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
+    toast.success(`Starting download for ${movie.title}`);
 
     if (supabase) {
       try {
@@ -674,6 +685,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
+      <Toaster position="top-center" richColors />
       <AnimatePresence>
         {/* Welcome animation removed */}
       </AnimatePresence>
