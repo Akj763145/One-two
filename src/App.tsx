@@ -5,8 +5,6 @@ import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdsterraAd from './components/AdsterraAd';
-import AdsterraNativeBanner from './components/AdsterraNativeBanner';
 import 'swiper/css';
 import 'swiper/css/free-mode';
 import 'swiper/css/effect-coverflow';
@@ -685,7 +683,29 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
-      <Toaster position="top-center" richColors />
+      <Toaster 
+        theme="dark" 
+        position="top-center" 
+        richColors 
+        toastOptions={{
+          style: {
+            background: '#0a0a0a',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: '#fff',
+            borderRadius: '12px',
+          },
+          success: {
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+            },
+          },
+          error: {
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.8)',
+            },
+          },
+        }}
+      />
       <AnimatePresence>
         {/* Welcome animation removed */}
       </AnimatePresence>
@@ -856,7 +876,7 @@ export default function App() {
                       <>{activeCategory} Movies</>
                     )}
                   </h2>
-                  <div className="flex flex-col lg:flex-row gap-8">
+                  <div className="flex flex-col gap-8">
                     <div className="flex-1">
                       {currentMovies.length > 0 ? (
                         <div className="flex flex-col gap-12">
@@ -875,13 +895,6 @@ export default function App() {
                           <p className="text-white/50">Try adjusting your search query.</p>
                         </div>
                       )}
-                    </div>
-                    
-                    {/* 160x300 Vertical Banner Ad */}
-                    <div className="hidden lg:block w-[160px] shrink-0">
-                      <div className="sticky top-24">
-                        <AdsterraAd adKey="48fc53489149f9fac60634e87fd9f134" width={160} height={300} />
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -921,17 +934,12 @@ export default function App() {
                     </div>
                   )}
                   
-                  {/* Adsterra Native Banner Ad */}
-                  <div className="my-12">
-                    <AdsterraNativeBanner />
-                  </div>
-
                   {/* All Movies Grid */}
                   <div id="watch-next" className="mb-12 scroll-mt-24">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl md:text-2xl font-bold tracking-tight">Watch Next</h2>
                     </div>
-                    <div className="flex flex-col lg:flex-row gap-8">
+                    <div className="flex flex-col gap-8">
                       <div className="flex-1 flex flex-col gap-12">
                         <div 
                           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
@@ -939,13 +947,6 @@ export default function App() {
                           {currentMovies.map((movie) => (
                             <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
                           ))}
-                        </div>
-                      </div>
-                      
-                      {/* 160x300 Vertical Banner Ad */}
-                      <div className="hidden lg:block w-[160px] shrink-0">
-                        <div className="sticky top-24">
-                          <AdsterraAd adKey="48fc53489149f9fac60634e87fd9f134" width={160} height={300} />
                         </div>
                       </div>
                     </div>
