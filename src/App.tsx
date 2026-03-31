@@ -41,6 +41,68 @@ interface Movie {
   match_score?: number;
 }
 
+const AdminSidebar: React.FC<{
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void,
+  onAddClick: () => void,
+  onLogout: () => void
+}> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-red-500' },
+    { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
+    { id: 'feedback', label: 'Feedback', icon: Users, color: 'text-emerald-500' },
+    { id: 'settings', label: 'Settings', icon: Settings, color: 'text-purple-500' },
+  ] as const;
+
+  return (
+    <div className="fixed left-0 top-0 bottom-0 w-64 bg-zinc-950 border-r border-white/5 flex flex-col z-[60] hidden lg:flex">
+      <div className="p-8">
+        <Logo showText={true} className="scale-90 origin-left" />
+      </div>
+
+      <div className="flex-1 px-4 space-y-2">
+        <div className="mb-4 px-4">
+          <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Main Menu</p>
+        </div>
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+              activeTab === item.id 
+                ? 'bg-white/10 text-white shadow-lg shadow-black/20' 
+                : 'text-white/40 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <item.icon size={20} className={activeTab === item.id ? item.color : 'group-hover:text-white transition-colors'} />
+            <span className="text-sm font-bold tracking-tight">{item.label}</span>
+            {activeTab === item.id && (
+              <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-6 space-y-4">
+        <button 
+          onClick={onAddClick}
+          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-red-600/20 active:scale-95"
+        >
+          <Plus size={18} /> Add Movie
+        </button>
+        
+        <button 
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/40 hover:bg-red-500/10 hover:text-red-500 transition-all group"
+        >
+          <LogOut size={18} className="group-hover:text-red-500" />
+          <span className="text-sm font-bold">Logout</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard: React.FC<{
   movies: Movie[],
   onEdit: (m: Movie) => void,
@@ -49,8 +111,8 @@ const Dashboard: React.FC<{
   onView: (id: string) => void,
   onShowDetails: (m: Movie) => void,
   searchQuery: string,
-  onSubViewChange: (view: 'none' | 'feedback' | 'seo' | 'health') => void
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onSubViewChange }) => {
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab }) => {
   const stats = useMemo(() => {
     const totalMovies = movies.length;
     const totalViews = movies.reduce((sum, m) => sum + (m.views || 0), 0);
@@ -85,8 +147,12 @@ const Dashboard: React.FC<{
     return { totalMovies, totalViews, totalDownloads, chartData };
   }, [movies]);
 
+  const recentMovies = useMemo(() => {
+    return [...movies].sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()).slice(0, 5);
+  }, [movies]);
+
   return (
-    <div className="px-6 md:px-16 pt-12 pb-20">
+    <div className="px-4 md:px-16 pt-8 md:pt-12 pb-32 md:pb-20">
       <div className="mb-12">
         <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
           <BarChart3 className="text-red-500" size={32} /> Admin Dashboard
@@ -144,13 +210,13 @@ const Dashboard: React.FC<{
         </motion.div>
       </div>
 
-      {/* Chart Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-16">
+        {/* Chart Section */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
         >
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -207,117 +273,102 @@ const Dashboard: React.FC<{
           </div>
         </motion.div>
 
+        {/* Recent Movies */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 flex flex-col"
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
         >
-          <h4 className="text-lg font-bold mb-6">Quick Actions</h4>
-          <div className="space-y-4 flex-1">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h4 className="text-lg font-bold mb-1">Recent Movies</h4>
+              <p className="text-white/40 text-xs">Latest additions to your catalog</p>
+            </div>
             <button 
-              onClick={() => onSubViewChange('feedback')}
-              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
+              onClick={() => setActiveTab('movies')}
+              className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                  <Users size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold">User Feedback</p>
-                  <p className="text-[10px] text-white/40 uppercase">Recent reviews</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
-            </button>
-            
-            <button 
-              onClick={() => onSubViewChange('seo')}
-              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
-                  <TrendingUp size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold">SEO Settings</p>
-                  <p className="text-[10px] text-white/40 uppercase">Meta tags & titles</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
-            </button>
-
-            <button 
-              onClick={() => onSubViewChange('health')}
-              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <Settings size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-bold">System Health</p>
-                  <p className="text-[10px] text-white/40 uppercase">Database status</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
+              View All
             </button>
           </div>
-          
-          <div className="mt-8 p-4 bg-red-500/10 rounded-2xl border border-red-500/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield size={16} className="text-red-500" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">Security Notice</span>
-            </div>
-            <p className="text-[11px] text-white/60 leading-relaxed">
-              You are currently logged in as an administrator. All changes are live and permanent.
-            </p>
+
+          <div className="space-y-4">
+            {recentMovies.map(movie => (
+              <div key={movie.id} className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h5 className="text-sm font-bold truncate">{movie.title}</h5>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider">{movie.category} • {movie.release_year || 'N/A'}</p>
+                </div>
+                <div className="flex items-center gap-4 px-4 border-l border-white/10">
+                  <div className="text-center">
+                    <p className="text-xs font-black">{movie.views || 0}</p>
+                    <p className="text-[8px] text-white/30 uppercase">Views</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-black">{movie.downloads || 0}</p>
+                    <p className="text-[8px] text-white/30 uppercase">DLs</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {recentMovies.length === 0 && (
+              <div className="text-center py-12 text-white/20">
+                <Film size={32} className="mx-auto mb-2 opacity-20" />
+                <p className="text-xs">No movies added yet.</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
+    </div>
+  );
+};
 
-      {/* Movie Management Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h3 className="text-2xl font-bold mb-1">Movie Management</h3>
-            <p className="text-white/40 text-sm">Edit or remove existing content</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-              <input 
-                type="text" 
-                placeholder="Search management..." 
-                className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all"
-              />
-            </div>
-          </div>
-        </div>
+const AdminMobileNav: React.FC<{
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void,
+  onAddClick: () => void,
+  onLogout: () => void
+}> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
+  const menuItems = [
+    { id: 'dashboard', label: 'Stats', icon: BarChart3 },
+    { id: 'movies', label: 'Movies', icon: Film },
+    { id: 'feedback', label: 'Users', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ] as const;
 
-        {movies.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {movies.map(movie => (
-              <MovieCard 
-                key={movie.id} 
-                movie={movie} 
-                isAdmin={true} 
-                onEdit={onEdit} 
-                onDelete={onDelete} 
-                onDownload={onDownload} 
-                onView={onView} 
-                onShowDetails={onShowDetails} 
-                searchQuery={searchQuery} 
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/10">
-            <Film size={48} className="mx-auto mb-4 text-white/20" />
-            <h3 className="text-xl font-bold mb-2">No movies found</h3>
-            <p className="text-white/50">Start by adding your first movie.</p>
-          </div>
-        )}
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/5 z-[100] lg:hidden px-4 py-2 pb-safe">
+      <div className="flex items-center justify-between gap-2">
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-all ${
+              activeTab === item.id ? 'text-red-500' : 'text-white/40'
+            }`}
+          >
+            <item.icon size={20} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+          </button>
+        ))}
+        <div className="w-px h-8 bg-white/10 mx-1" />
+        <button
+          onClick={onAddClick}
+          className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/20 active:scale-90 transition-transform"
+        >
+          <Plus size={20} />
+        </button>
+        <button
+          onClick={onLogout}
+          className="w-10 h-10 rounded-full bg-white/5 text-white/40 flex items-center justify-center hover:text-red-500 transition-colors"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </div>
   );
@@ -647,8 +698,12 @@ export default function App() {
   const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [adminView, setAdminView] = useState<'all' | 'featured'>('all');
-  const [adminSubView, setAdminSubView] = useState<'none' | 'feedback' | 'seo' | 'health'>('none');
+  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings'>('dashboard');
+  const [seoSettings, setSeoSettings] = useState({
+    title: 'Movie Wallah - Download any movie Here',
+    description: 'Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.',
+    keywords: 'movies, download movies, movie reviews, cinema, movie wallah, movie wallah online'
+  });
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
@@ -656,6 +711,76 @@ export default function App() {
     title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
     release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
   });
+
+  useEffect(() => {
+    // Load SEO settings from Supabase or localStorage
+    const fetchSeoSettings = async () => {
+      if (supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'seo')
+            .single();
+          
+          if (data && data.value) {
+            setSeoSettings(data.value);
+            localStorage.setItem('movieWallah_seo', JSON.stringify(data.value));
+            return;
+          }
+          if (error) console.warn('Supabase SEO fetch error:', error.message);
+        } catch (e) {
+          console.error('Failed to fetch SEO from Supabase');
+        }
+      }
+
+      // Fallback to localStorage
+      const savedSeo = localStorage.getItem('movieWallah_seo');
+      if (savedSeo) {
+        try {
+          setSeoSettings(JSON.parse(savedSeo));
+        } catch (e) {
+          console.error('Failed to parse saved SEO settings');
+        }
+      }
+    };
+
+    fetchSeoSettings();
+  }, []);
+
+  useEffect(() => {
+    // Apply SEO settings to the document
+    document.title = seoSettings.title;
+    
+    const updateMeta = (name: string, content: string) => {
+      let meta = document.querySelector(`meta[name="${name}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', name);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    const updateOG = (property: string, content: string) => {
+      let meta = document.querySelector(`meta[property="${property}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('property', property);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    updateMeta('description', seoSettings.description);
+    updateMeta('keywords', seoSettings.keywords);
+    
+    // Update Open Graph tags for better social sharing
+    updateOG('og:title', seoSettings.title);
+    updateOG('og:description', seoSettings.description);
+    updateOG('twitter:title', seoSettings.title);
+    updateOG('twitter:description', seoSettings.description);
+  }, [seoSettings]);
 
   useEffect(() => {
     // Force dark mode
@@ -1003,73 +1128,148 @@ export default function App() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <Navbar 
-        isAdmin={isAdmin} 
-        onAdminClick={() => setShowAdminLogin(true)} 
-        onLogout={() => { setIsAdmin(false); setAdminView('all'); }}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
-        isSearchActive={isSearchActive}
-        setIsSearchActive={(active) => {
-          if (!active && window.history.state?.modal === 'search') {
-            window.history.back();
-          }
-          setIsSearchActive(active);
-          if (!active) setSearchQuery('');
-        }}
-        movies={movies}
-        onDMCAClick={() => setShowDMCA(true)}
-        adminView={adminView}
-        setAdminView={setAdminView}
-        setActiveCategory={setActiveCategory}
-      />
+      {!isAdmin && (
+        <Navbar 
+          isAdmin={isAdmin} 
+          onAdminClick={() => setShowAdminLogin(true)} 
+          onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+          isSearchActive={isSearchActive}
+          setIsSearchActive={(active) => {
+            if (!active && window.history.state?.modal === 'search') {
+              window.history.back();
+            }
+            setIsSearchActive(active);
+            if (!active) setSearchQuery('');
+          }}
+          movies={movies}
+          onDMCAClick={() => setShowDMCA(true)}
+          setActiveCategory={setActiveCategory}
+        />
+      )}
       
-      <main className="pt-20 md:pt-24 pb-24">
-        {isLoading ? (
-          <div className="h-screen flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : isAdmin && adminView === 'all' ? (
-          <Dashboard 
-            movies={movies} 
-            onEdit={handleEdit} 
-            onDelete={setMovieToDelete} 
-            onDownload={handleDownload} 
-            onView={handleView} 
-            onShowDetails={setSelectedMovieForDetails} 
-            searchQuery={searchQuery} 
-            onSubViewChange={setAdminSubView}
+      {isAdmin ? (
+        <div className="flex min-h-screen bg-black">
+          <AdminSidebar 
+            activeTab={adminView} 
+            setActiveTab={setAdminView} 
+            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
-        ) : isAdmin && adminView === 'featured' ? (
-          <div className="px-6 md:px-16 pt-12">
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <Star className="text-yellow-500" /> Featured Content (Hero Section)
-              </h2>
-              <p className="text-white/50 mb-8">These movies are currently featured in the Hero section on the homepage.</p>
-              <div className="flex flex-col lg:flex-row gap-8">
-                <div className="flex-1">
-                  {heroMovies.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                      {heroMovies.map(movie => (
-                        <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
-                      <Star size={48} className="mx-auto mb-4 text-white/20" />
-                      <h3 className="text-xl font-bold mb-2">No Featured Movies</h3>
-                      <p className="text-white/50">Edit a movie and check "Show in Hero Section" to feature it.</p>
-                    </div>
-                  )}
+
+          <AdminMobileNav
+            activeTab={adminView}
+            setActiveTab={setAdminView}
+            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
+          />
+          
+          <main className="flex-1 lg:ml-64 min-h-screen relative">
+            <div className="p-4 lg:p-8">
+              {isLoading ? (
+                <div className="h-[60vh] flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
-              </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={adminView}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {adminView === 'dashboard' && (
+                      <Dashboard 
+                        movies={movies} 
+                        onEdit={handleEdit} 
+                        onDelete={setMovieToDelete} 
+                        onDownload={handleDownload} 
+                        onView={handleView} 
+                        onShowDetails={setSelectedMovieForDetails} 
+                        searchQuery={searchQuery} 
+                        setActiveTab={setAdminView}
+                      />
+                    )}
+                    {adminView === 'movies' && (
+                      <MovieManagement 
+                        movies={movies} 
+                        onEdit={handleEdit} 
+                        onDelete={setMovieToDelete} 
+                        onDownload={handleDownload} 
+                        onView={handleView} 
+                        onShowDetails={setSelectedMovieForDetails} 
+                        searchQuery={searchQuery} 
+                      />
+                    )}
+                    {adminView === 'feedback' && (
+                      <div className="px-6 md:px-16 pt-12 pb-20">
+                        <div className="mb-12">
+                          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                            <Users className="text-emerald-500" size={32} /> User Feedback
+                          </h2>
+                          <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Community Reviews & Ratings</p>
+                        </div>
+                        <FeedbackManager movies={movies} />
+                      </div>
+                    )}
+                    {adminView === 'settings' && (
+                      <div className="px-6 md:px-16 pt-12 pb-20">
+                        <div className="mb-12">
+                          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                            <Settings className="text-purple-500" size={32} /> Platform Settings
+                          </h2>
+                          <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">SEO & System Configuration</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+                          <div className="space-y-8">
+                            <h3 className="text-xl font-bold border-b border-white/5 pb-4">SEO Configuration</h3>
+                            <SEOSettings 
+                              settings={seoSettings} 
+                              onSave={async (newSettings) => {
+                                setSeoSettings(newSettings);
+                                localStorage.setItem('movieWallah_seo', JSON.stringify(newSettings));
+                                if (supabase) {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('site_settings')
+                                      .upsert({ id: 'seo', value: newSettings, updated_at: new Date().toISOString() });
+                                    if (error) throw error;
+                                  } catch (e) {
+                                    console.error('Failed to save SEO to Supabase');
+                                    toast.error('Saved locally, but failed to sync with cloud');
+                                  }
+                                }
+                              }} 
+                            />
+                          </div>
+                          
+                          <div className="space-y-8">
+                            <h3 className="text-xl font-bold border-b border-white/5 pb-4">System Health</h3>
+                            <SystemHealth movies={movies} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              )}
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Hero Section */}
+          </main>
+        </div>
+      ) : (
+        <>
+          <main className="pt-20 md:pt-24 pb-24">
+            {isLoading ? (
+              <div className="h-screen flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+              {/* Hero Section */}
             {featuredMovies.length > 0 && !searchQuery && !isSearchActive && activeCategory === 'All' && (
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden pt-10 md:pt-16">
                 <Swiper
@@ -1284,6 +1484,8 @@ export default function App() {
           </p>
         </div>
       </footer>
+    </>
+  )}
 
       {/* Modals */}
       <AnimatePresence>
@@ -1540,50 +1742,74 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Admin Sub-view Modals */}
-      <AnimatePresence>
-        {adminSubView !== 'none' && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.9, opacity: 0, y: 20 }} 
-              className="w-full max-w-4xl max-h-[85vh] bg-zinc-900 rounded-3xl border border-white/10 overflow-hidden flex flex-col shadow-2xl"
-            >
-              <div className="p-6 border-b border-white/10 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  {adminSubView === 'feedback' && <Users className="text-blue-400" />}
-                  {adminSubView === 'seo' && <TrendingUp className="text-purple-400" />}
-                  {adminSubView === 'health' && <Settings className="text-emerald-400" />}
-                  <h3 className="text-xl font-bold capitalize">
-                    {adminSubView === 'feedback' ? 'User Feedback' : adminSubView === 'seo' ? 'SEO Settings' : 'System Health'}
-                  </h3>
-                </div>
-                <button 
-                  onClick={() => setAdminSubView('none')}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                {adminSubView === 'feedback' && <FeedbackManager movies={movies} />}
-                {adminSubView === 'seo' && <SEOSettings />}
-                {adminSubView === 'health' && <SystemHealth movies={movies} />}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
+
+const MovieManagement: React.FC<{
+  movies: Movie[],
+  onEdit: (m: Movie) => void,
+  onDelete: (id: string) => void,
+  onDownload: (id: string) => void,
+  onView: (id: string) => void,
+  onShowDetails: (m: Movie) => void,
+  searchQuery: string
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery }) => {
+  const [localSearch, setLocalSearch] = useState('');
+  
+  const filteredMovies = movies.filter(m => 
+    m.title.toLowerCase().includes(localSearch.toLowerCase()) ||
+    m.category.toLowerCase().includes(localSearch.toLowerCase())
+  );
+
+  return (
+    <div className="px-6 md:px-16 pt-12 pb-20">
+      <div className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+            <Film className="text-blue-500" size={32} /> Movie Management
+          </h2>
+          <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Catalog Control & Editing</p>
+        </div>
+        
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+          <input 
+            type="text" 
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            placeholder="Search catalog..." 
+            className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all w-full md:w-80"
+          />
+        </div>
+      </div>
+
+      {filteredMovies.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+          {filteredMovies.map(movie => (
+            <MovieCard 
+              key={movie.id} 
+              movie={movie} 
+              isAdmin={true} 
+              onEdit={onEdit} 
+              onDelete={onDelete} 
+              onDownload={onDownload} 
+              onView={onView} 
+              onShowDetails={onShowDetails} 
+              searchQuery={searchQuery} 
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-32 bg-white/5 rounded-3xl border border-white/10">
+          <Film size={48} className="mx-auto mb-4 text-white/20" />
+          <h3 className="text-xl font-bold mb-2">No movies found</h3>
+          <p className="text-white/50">Try adjusting your search or add a new movie.</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
   const [allReviews, setAllReviews] = useState<(Review & { movieTitle: string })[]>([]);
@@ -1685,17 +1911,23 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
   );
 };
 
-const SEOSettings: React.FC = () => {
-  const [siteName, setSiteName] = useState('Movie Wallah');
-  const [description, setDescription] = useState('A movie sharing website with an admin panel to add, edit, and delete movie links.');
+const SEOSettings: React.FC<{ 
+  settings: { title: string, description: string, keywords: string },
+  onSave: (settings: { title: string, description: string, keywords: string }) => void
+}> = ({ settings, onSave }) => {
+  const [title, setTitle] = useState(settings.title);
+  const [description, setDescription] = useState(settings.description);
+  const [keywords, setKeywords] = useState(settings.keywords);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
     setIsSaving(true);
-    setTimeout(() => {
+    // Use a small timeout to allow UI feedback
+    setTimeout(async () => {
+      await onSave({ title, description, keywords });
       setIsSaving(false);
-      toast.success('SEO Settings updated (Simulated)');
-    }, 1000);
+      toast.success('SEO Configuration applied in real-time!');
+    }, 800);
   };
 
   return (
@@ -1705,8 +1937,8 @@ const SEOSettings: React.FC = () => {
           <label className="block text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-2">Site Title</label>
           <input 
             type="text" 
-            value={siteName} 
-            onChange={(e) => setSiteName(e.target.value)}
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)}
             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all" 
           />
         </div>
@@ -1723,6 +1955,8 @@ const SEOSettings: React.FC = () => {
           <label className="block text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-2">Primary Keywords</label>
           <input 
             type="text" 
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
             placeholder="movies, download, streaming, originals..."
             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all" 
           />
@@ -1735,8 +1969,8 @@ const SEOSettings: React.FC = () => {
           <h4 className="font-bold">Google Search Preview</h4>
         </div>
         <div className="space-y-1">
-          <p className="text-blue-400 text-lg hover:underline cursor-pointer truncate">{siteName}</p>
-          <p className="text-emerald-500 text-xs truncate">https://moviewallah.app</p>
+          <p className="text-blue-400 text-lg hover:underline cursor-pointer truncate">{title}</p>
+          <p className="text-emerald-500 text-xs truncate">https://moviewallah.online</p>
           <p className="text-white/50 text-xs line-clamp-2">{description}</p>
         </div>
       </div>
@@ -1746,7 +1980,7 @@ const SEOSettings: React.FC = () => {
         disabled={isSaving}
         className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-purple-500 hover:text-white transition-all disabled:opacity-50"
       >
-        {isSaving ? 'Updating...' : 'Save SEO Configuration'}
+        {isSaving ? 'Updating Metadata...' : 'Apply SEO Configuration'}
       </button>
     </div>
   );
