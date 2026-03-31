@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2 } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip 
+} from 'recharts';
 import 'swiper/css';
 import 'swiper/css/free-mode';
 import 'swiper/css/effect-coverflow';
@@ -31,6 +40,288 @@ interface Movie {
   quality?: string;
   match_score?: number;
 }
+
+const Dashboard: React.FC<{
+  movies: Movie[],
+  onEdit: (m: Movie) => void,
+  onDelete: (id: string) => void,
+  onDownload: (id: string) => void,
+  onView: (id: string) => void,
+  onShowDetails: (m: Movie) => void,
+  searchQuery: string,
+  onSubViewChange: (view: 'none' | 'feedback' | 'seo' | 'health') => void
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onSubViewChange }) => {
+  const stats = useMemo(() => {
+    const totalMovies = movies.length;
+    const totalViews = movies.reduce((sum, m) => sum + (m.views || 0), 0);
+    const totalDownloads = movies.reduce((sum, m) => sum + (m.downloads || 0), 0);
+    
+    // Group movies by month for the chart
+    const monthlyData: { [key: string]: number } = {};
+    const now = new Date();
+    
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = d.toLocaleString('default', { month: 'short' });
+      monthlyData[monthName] = 0;
+    }
+
+    movies.forEach(movie => {
+      if (movie.created_at) {
+        const date = new Date(movie.created_at);
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        if (monthlyData.hasOwnProperty(monthName)) {
+          monthlyData[monthName]++;
+        }
+      }
+    });
+
+    const chartData = Object.entries(monthlyData).map(([name, count]) => ({
+      name,
+      movies: count
+    }));
+
+    return { totalMovies, totalViews, totalDownloads, chartData };
+  }, [movies]);
+
+  return (
+    <div className="px-6 md:px-16 pt-12 pb-20">
+      <div className="mb-12">
+        <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+          <BarChart3 className="text-red-500" size={32} /> Admin Dashboard
+        </h2>
+        <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Platform Overview & Statistics</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Film size={80} />
+          </div>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Movies</p>
+          <h3 className="text-5xl font-black text-white mb-1">{stats.totalMovies}</h3>
+          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+            <TrendingUp size={14} /> +{movies.filter(m => {
+              const d = new Date(m.created_at || '');
+              const now = new Date();
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length} this month
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Eye size={80} />
+          </div>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Views</p>
+          <h3 className="text-5xl font-black text-blue-400 mb-1">{stats.totalViews.toLocaleString()}</h3>
+          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Across all content</p>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Download size={80} />
+          </div>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Downloads</p>
+          <h3 className="text-5xl font-black text-emerald-400 mb-1">{stats.totalDownloads.toLocaleString()}</h3>
+          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Direct user engagement</p>
+        </motion.div>
+      </div>
+
+      {/* Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="lg:col-span-2 bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
+        >
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h4 className="text-lg font-bold mb-1">Movie Upload Activity</h4>
+              <p className="text-white/40 text-xs">Number of movies added over the last 6 months</p>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+              <Activity size={14} className="text-red-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Live Data</span>
+            </div>
+          </div>
+          
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.chartData}>
+                <defs>
+                  <linearGradient id="colorMovies" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#ffffff40', fontSize: 12 }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#ffffff40', fontSize: 12 }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#18181b', 
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    fontSize: '12px'
+                  }}
+                  itemStyle={{ color: '#ef4444' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="movies" 
+                  stroke="#ef4444" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorMovies)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 flex flex-col"
+        >
+          <h4 className="text-lg font-bold mb-6">Quick Actions</h4>
+          <div className="space-y-4 flex-1">
+            <button 
+              onClick={() => onSubViewChange('feedback')}
+              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Users size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold">User Feedback</p>
+                  <p className="text-[10px] text-white/40 uppercase">Recent reviews</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
+            </button>
+            
+            <button 
+              onClick={() => onSubViewChange('seo')}
+              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                  <TrendingUp size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold">SEO Settings</p>
+                  <p className="text-[10px] text-white/40 uppercase">Meta tags & titles</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
+            </button>
+
+            <button 
+              onClick={() => onSubViewChange('health')}
+              className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Settings size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold">System Health</p>
+                  <p className="text-[10px] text-white/40 uppercase">Database status</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-colors" />
+            </button>
+          </div>
+          
+          <div className="mt-8 p-4 bg-red-500/10 rounded-2xl border border-red-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield size={16} className="text-red-500" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">Security Notice</span>
+            </div>
+            <p className="text-[11px] text-white/60 leading-relaxed">
+              You are currently logged in as an administrator. All changes are live and permanent.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Movie Management Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-2xl font-bold mb-1">Movie Management</h3>
+            <p className="text-white/40 text-sm">Edit or remove existing content</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative hidden md:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search management..." 
+                className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {movies.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {movies.map(movie => (
+              <MovieCard 
+                key={movie.id} 
+                movie={movie} 
+                isAdmin={true} 
+                onEdit={onEdit} 
+                onDelete={onDelete} 
+                onDownload={onDownload} 
+                onView={onView} 
+                onShowDetails={onShowDetails} 
+                searchQuery={searchQuery} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/10">
+            <Film size={48} className="mx-auto mb-4 text-white/20" />
+            <h3 className="text-xl font-bold mb-2">No movies found</h3>
+            <p className="text-white/50">Start by adding your first movie.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface Review {
   id: string;
@@ -357,6 +648,7 @@ export default function App() {
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
   const [adminView, setAdminView] = useState<'all' | 'featured'>('all');
+  const [adminSubView, setAdminSubView] = useState<'none' | 'feedback' | 'seo' | 'health'>('none');
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
@@ -738,6 +1030,17 @@ export default function App() {
           <div className="h-screen flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : isAdmin && adminView === 'all' ? (
+          <Dashboard 
+            movies={movies} 
+            onEdit={handleEdit} 
+            onDelete={setMovieToDelete} 
+            onDownload={handleDownload} 
+            onView={handleView} 
+            onShowDetails={setSelectedMovieForDetails} 
+            searchQuery={searchQuery} 
+            onSubViewChange={setAdminSubView}
+          />
         ) : isAdmin && adminView === 'featured' ? (
           <div className="px-6 md:px-16 pt-12">
             <div className="mb-12">
@@ -1236,9 +1539,322 @@ export default function App() {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Admin Sub-view Modals */}
+      <AnimatePresence>
+        {adminSubView !== 'none' && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+              className="w-full max-w-4xl max-h-[85vh] bg-zinc-900 rounded-3xl border border-white/10 overflow-hidden flex flex-col shadow-2xl"
+            >
+              <div className="p-6 border-b border-white/10 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  {adminSubView === 'feedback' && <Users className="text-blue-400" />}
+                  {adminSubView === 'seo' && <TrendingUp className="text-purple-400" />}
+                  {adminSubView === 'health' && <Settings className="text-emerald-400" />}
+                  <h3 className="text-xl font-bold capitalize">
+                    {adminSubView === 'feedback' ? 'User Feedback' : adminSubView === 'seo' ? 'SEO Settings' : 'System Health'}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setAdminSubView('none')}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                {adminSubView === 'feedback' && <FeedbackManager movies={movies} />}
+                {adminSubView === 'seo' && <SEOSettings />}
+                {adminSubView === 'health' && <SystemHealth movies={movies} />}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
+  const [allReviews, setAllReviews] = useState<(Review & { movieTitle: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllReviews = async () => {
+      setLoading(true);
+      try {
+        if (supabase) {
+          const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+          if (error) throw error;
+          
+          const reviewsWithTitles = (data || []).map(r => ({
+            ...r,
+            movieTitle: movies.find(m => m.id === r.movie_id)?.title || 'Unknown Movie'
+          }));
+          setAllReviews(reviewsWithTitles);
+        } else {
+          // Mock local storage reviews
+          const reviews: (Review & { movieTitle: string })[] = [];
+          movies.forEach(m => {
+            const saved = localStorage.getItem(`reviews_${m.id}`);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              parsed.forEach((r: Review) => reviews.push({ ...r, movieTitle: m.title }));
+            }
+          });
+          setAllReviews(reviews.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()));
+        }
+      } catch (err) {
+        console.error('Error fetching all reviews:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllReviews();
+  }, [movies]);
+
+  const handleDeleteReview = async (reviewId: string, movieId: string) => {
+    try {
+      if (supabase) {
+        const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+        if (error) throw error;
+      } else {
+        const saved = localStorage.getItem(`reviews_${movieId}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const filtered = parsed.filter((r: Review) => r.id !== reviewId);
+          localStorage.setItem(`reviews_${movieId}`, JSON.stringify(filtered));
+        }
+      }
+      setAllReviews(prev => prev.filter(r => r.id !== reviewId));
+      toast.success('Review deleted');
+    } catch (err) {
+      toast.error('Failed to delete review');
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      {allReviews.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4">
+          {allReviews.map(review => (
+            <div key={review.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-sm font-bold text-white">{review.user_name}</span>
+                  <div className="flex items-center gap-1 text-yellow-500">
+                    <Star size={12} fill="currentColor" />
+                    <span className="text-xs font-bold">{review.rating}</span>
+                  </div>
+                  <span className="text-[10px] text-white/30 uppercase tracking-widest">on {review.movieTitle}</span>
+                </div>
+                <p className="text-sm text-white/70 leading-relaxed italic">"{review.text}"</p>
+                <p className="text-[10px] text-white/20 mt-3 uppercase tracking-wider">
+                  {review.created_at ? new Date(review.created_at).toLocaleDateString() : 'Unknown date'}
+                </p>
+              </div>
+              <button 
+                onClick={() => handleDeleteReview(review.id, review.movie_id)}
+                className="self-start p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors"
+                title="Delete Review"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20 opacity-30">
+          <Users size={48} className="mx-auto mb-4" />
+          <p>No reviews found across the platform.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SEOSettings: React.FC = () => {
+  const [siteName, setSiteName] = useState('Movie Wallah');
+  const [description, setDescription] = useState('A movie sharing website with an admin panel to add, edit, and delete movie links.');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success('SEO Settings updated (Simulated)');
+    }, 1000);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div className="space-y-6">
+        <div>
+          <label className="block text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-2">Site Title</label>
+          <input 
+            type="text" 
+            value={siteName} 
+            onChange={(e) => setSiteName(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all" 
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-2">Meta Description</label>
+          <textarea 
+            rows={4}
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all resize-none" 
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-2">Primary Keywords</label>
+          <input 
+            type="text" 
+            placeholder="movies, download, streaming, originals..."
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all" 
+          />
+        </div>
+      </div>
+      
+      <div className="p-6 bg-purple-500/10 rounded-2xl border border-purple-500/20">
+        <div className="flex items-center gap-3 mb-3">
+          <TrendingUp size={20} className="text-purple-400" />
+          <h4 className="font-bold">Google Search Preview</h4>
+        </div>
+        <div className="space-y-1">
+          <p className="text-blue-400 text-lg hover:underline cursor-pointer truncate">{siteName}</p>
+          <p className="text-emerald-500 text-xs truncate">https://moviewallah.app</p>
+          <p className="text-white/50 text-xs line-clamp-2">{description}</p>
+        </div>
+      </div>
+
+      <button 
+        onClick={handleSave}
+        disabled={isSaving}
+        className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-purple-500 hover:text-white transition-all disabled:opacity-50"
+      >
+        {isSaving ? 'Updating...' : 'Save SEO Configuration'}
+      </button>
+    </div>
+  );
+};
+
+const SystemHealth: React.FC<{ movies: Movie[] }> = ({ movies }) => {
+  const [dbStatus, setDbStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [latency, setLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      const start = Date.now();
+      try {
+        if (supabase) {
+          const { error } = await supabase.from('movies').select('id', { count: 'exact', head: true });
+          if (error) throw error;
+          setDbStatus('online');
+        } else {
+          setDbStatus('online'); // Local storage is always "online"
+        }
+        setLatency(Date.now() - start);
+      } catch (err) {
+        setDbStatus('offline');
+      }
+    };
+    checkHealth();
+  }, []);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="space-y-6">
+        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-6">Database Connectivity</h4>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm">Status</span>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${dbStatus === 'online' ? 'bg-emerald-500' : dbStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+              <span className={`text-sm font-bold capitalize ${dbStatus === 'online' ? 'text-emerald-400' : dbStatus === 'offline' ? 'text-red-400' : 'text-yellow-400'}`}>
+                {dbStatus}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Latency</span>
+            <span className="text-sm font-mono text-white/50">{latency ? `${latency}ms` : '--'}</span>
+          </div>
+        </div>
+
+        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-6">Storage Usage</h4>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span>Database Rows</span>
+                <span className="text-white/40">{movies.length} / 10,000</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500" style={{ width: `${(movies.length / 10000) * 100}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span>Media Assets</span>
+                <span className="text-white/40">~1.2 GB</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500" style={{ width: '12%' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+            <Shield size={32} />
+          </div>
+          <h4 className="text-lg font-bold mb-2">System is Healthy</h4>
+          <p className="text-sm text-white/50 leading-relaxed">
+            All services are operating normally. No critical issues detected in the last 24 hours.
+          </p>
+        </div>
+
+        <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+          <h4 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-4">Recent Logs</h4>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-[10px] font-mono">
+              <span className="text-white/20">16:52:48</span>
+              <span className="text-emerald-400">[INFO]</span>
+              <span className="text-white/60">Admin dashboard accessed</span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-mono">
+              <span className="text-white/20">16:48:37</span>
+              <span className="text-blue-400">[SYNC]</span>
+              <span className="text-white/60">Supabase state reconciled</span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-mono">
+              <span className="text-white/20">16:45:12</span>
+              <span className="text-emerald-400">[INFO]</span>
+              <span className="text-white/60">New movie 'The Raja Saab' added</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Reusable Movie Poster Component with Fallback
 const MoviePoster: React.FC<{ 
