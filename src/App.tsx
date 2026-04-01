@@ -415,7 +415,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 1.2, ease: [0.43, 0.13, 0.23, 0.96] }}
+      transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
       onAnimationComplete={onComplete}
       className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden"
     >
@@ -423,10 +423,10 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
         initial={{ scale: 0.8, opacity: 0, filter: 'blur(20px)' }}
         animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
         transition={{ 
-          duration: 2.5, 
+          duration: 1.8, 
           ease: [0.22, 1, 0.36, 1],
-          opacity: { duration: 1.5 },
-          filter: { duration: 1.5 }
+          opacity: { duration: 1.2 },
+          filter: { duration: 1.2 }
         }}
         className="flex flex-col items-center gap-8 relative z-10"
       >
@@ -434,7 +434,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
           className="relative"
         >
           <div className="w-32 h-32 md:w-48 md:h-48 relative overflow-hidden rounded-2xl shadow-2xl shadow-red-600/20">
@@ -445,7 +445,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
               <motion.circle 
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
+                transition={{ duration: 1.2, ease: "easeInOut" }}
                 cx="256" cy="256" r="230" fill="none" stroke="#ffffff" strokeWidth="12" 
               />
               
@@ -453,13 +453,13 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
               <motion.path 
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
+                transition={{ duration: 1.2, delay: 0.4, ease: "easeInOut" }}
                 d="M 436 182 A 195 195 0 0 0 76 182" fill="none" stroke="#e53935" strokeWidth="6" strokeLinecap="butt" 
               />
               <motion.path 
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.5, delay: 0.5, ease: "easeInOut" }}
+                transition={{ duration: 1.2, delay: 0.4, ease: "easeInOut" }}
                 d="M 76 330 A 195 195 0 0 0 436 330" fill="none" stroke="#e53935" strokeWidth="6" strokeLinecap="butt" 
               />
 
@@ -467,13 +467,13 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
               <motion.text 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.2 }}
+                transition={{ duration: 0.6, delay: 0.9 }}
                 x="256" y="190" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontWeight="bold"
               >M</motion.text>
               <motion.text 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.4 }}
+                transition={{ duration: 0.6, delay: 1.1 }}
                 x="256" y="340" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontWeight="bold"
               >W</motion.text>
             </svg>
@@ -497,7 +497,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
           <motion.div 
             initial={{ letterSpacing: "0.5em", opacity: 0 }}
             animate={{ letterSpacing: "0.1em", opacity: 1 }}
-            transition={{ duration: 2, delay: 0.5, ease: "easeOut" }}
+            transition={{ duration: 1.5, delay: 0.4, ease: "easeOut" }}
             className="flex items-center gap-3 mb-6"
           >
             <span className="text-red-600 font-black text-4xl md:text-7xl tracking-tighter uppercase">MOVIE</span>
@@ -508,7 +508,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 1.5 }}
+            transition={{ duration: 0.8, delay: 1.2 }}
             className="flex flex-col gap-3 items-center"
           >
             <div className="h-[1px] w-12 bg-red-600/50 mb-2" />
@@ -526,7 +526,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.15 }}
-        transition={{ duration: 3 }}
+        transition={{ duration: 2.5 }}
         className="absolute inset-0 pointer-events-none"
       >
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-red-600/20 rounded-full blur-[150px]" />
@@ -825,7 +825,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowWelcome(false);
-    }, 4000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -845,6 +845,16 @@ export default function App() {
   const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
+
+  const handleSetActiveCategory = (category: string) => {
+    if (category === 'All' && activeCategory !== 'All') {
+      if (window.history.state?.modal === 'category') {
+        window.history.back();
+      }
+    }
+    setActiveCategory(category);
+  };
+
   const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs'>('dashboard');
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [seoSettings, setSeoSettings] = useState({
@@ -1137,6 +1147,27 @@ export default function App() {
     };
   }, [isSearchActive]);
 
+  // Handle browser back button to go back to 'All' category
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (activeCategory !== 'All') {
+        setActiveCategory('All');
+      }
+    };
+
+    if (activeCategory !== 'All') {
+      // Push a new state when a category is selected, but only if we're not already in a category state
+      if (window.history.state?.modal !== 'category') {
+        window.history.pushState({ modal: 'category' }, '');
+      }
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeCategory]);
+
   // Also lock scroll for other modals
   useEffect(() => {
     if (showAddEditModal || showDMCA || showAdminLogin || movieToDelete) {
@@ -1405,7 +1436,7 @@ export default function App() {
           }}
           movies={movies}
           onDMCAClick={() => setShowDMCA(true)}
-          setActiveCategory={setActiveCategory}
+          setActiveCategory={handleSetActiveCategory}
         />
       )}
       
@@ -1629,7 +1660,7 @@ export default function App() {
                   {CATEGORIES.map(category => (
                     <button
                       key={category}
-                      onClick={() => setActiveCategory(category)}
+                      onClick={() => handleSetActiveCategory(category)}
                       className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                         activeCategory === category 
                           ? 'bg-white text-black' 
