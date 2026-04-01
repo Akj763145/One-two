@@ -443,26 +443,25 @@ const Logo: React.FC<{ className?: string, showText?: boolean }> = ({ className 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <div className="relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
-        {/* Circular borders */}
-        <div className="absolute inset-0 border-2 border-current rounded-full" />
-        <div className="absolute inset-[3px] border border-red-600 rounded-full" />
-        {/* MW Text */}
-        <div className="relative flex flex-col items-center leading-none">
-          <span className="text-current font-serif text-lg md:text-xl font-bold -mb-1">M</span>
-          <span className="text-current font-serif text-lg md:text-xl font-bold">W</span>
-        </div>
+        <svg viewBox="0 0 512 512" className="w-full h-full">
+          <circle cx="256" cy="256" r="230" fill="none" stroke="currentColor" strokeWidth="20" />
+          <path d="M 436 182 A 195 195 0 0 0 76 182" fill="none" stroke="#e53935" strokeWidth="12" />
+          <path d="M 76 330 A 195 195 0 0 0 436 330" fill="none" stroke="#e53935" strokeWidth="12" />
+          <text x="256" y="190" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="currentColor" textAnchor="middle" dominantBaseline="central" fontWeight="bold">M</text>
+          <text x="256" y="340" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="currentColor" textAnchor="middle" dominantBaseline="central" fontWeight="bold">W</text>
+        </svg>
       </div>
       {showText && (
         <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 leading-none">
-            <span className="text-red-600 font-bold text-xl md:text-2xl tracking-tight uppercase">Movie</span>
-            <span className="text-current font-bold text-xl md:text-2xl tracking-tight uppercase">Wallah</span>
+          <div className="flex items-center gap-1 leading-none md:gap-1.5">
+            <span className="text-red-600 font-bold text-base md:text-2xl tracking-tight uppercase">Movie</span>
+            <span className="text-current font-bold text-base md:text-2xl tracking-tight uppercase">Wallah</span>
           </div>
           <div className="flex flex-col mt-0.5 leading-tight">
-            <span className="text-[7px] md:text-[9px] text-current opacity-40 tracking-[0.15em] uppercase font-medium">
+            <span className="text-[6px] md:text-[9px] text-current opacity-40 tracking-[0.15em] uppercase font-medium">
               Proudly made by Bihari
             </span>
-            <span className="text-[6px] md:text-[8px] text-red-500 tracking-[0.2em] uppercase font-bold">
+            <span className="text-[7px] md:text-[10px] text-red-500 tracking-[0.2em] uppercase font-black bg-red-500/10 px-1 rounded-sm w-fit">
               Developed by AYUSH
             </span>
           </div>
@@ -501,14 +500,14 @@ const Navbar: React.FC<{
   }, []);
 
   return (
-    <nav className={`fixed top-4 left-4 right-4 z-50 transition-all duration-500 px-6 md:px-12 py-3 flex items-center justify-between rounded-2xl border border-white/10 backdrop-blur-xl ${
+    <nav className={`fixed top-2 left-2 right-2 md:top-4 md:left-4 md:right-4 z-50 transition-all duration-500 px-4 md:px-12 py-2.5 md:py-3 flex items-center justify-between rounded-2xl border border-white/10 backdrop-blur-xl ${
       isScrolled 
-        ? 'bg-black/80 shadow-2xl shadow-black/80 py-2.5' 
+        ? 'bg-black/80 shadow-2xl shadow-black/80 py-2 md:py-2.5' 
         : 'bg-gradient-to-b from-black/90 via-black/40 to-transparent'
     }`}>
-      <div className={`flex items-center gap-8 md:gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
+      <div className={`flex items-center gap-3 md:gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); setActiveCategory('All'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <Logo />
+          <Logo className="scale-90 md:scale-100 origin-left" />
         </div>
         
         {isAdmin && (
@@ -558,26 +557,28 @@ const Navbar: React.FC<{
         </div>
       </div>
 
-      <div className={`flex items-center gap-4 md:gap-8 transition-all duration-300 ${isSearchActive ? 'opacity-0 translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
+      <div className={`flex items-center gap-2 md:gap-8 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         {/* Search Toggle */}
         <button 
           onClick={() => setIsSearchActive(true)}
           className="p-[1px] rounded-full bg-gradient-to-r from-red-500 to-red-900 hover:from-red-400 hover:to-red-800 transition-all shadow-lg shadow-red-500/20"
         >
-          <div className="bg-black rounded-full p-2">
-            <Search size={22} className="text-white opacity-80 hover:opacity-100 transition-opacity" />
+          <div className="bg-black rounded-full p-1.5 md:p-2">
+            <Search size={18} className="text-white md:hidden opacity-80 hover:opacity-100 transition-opacity" />
+            <Search size={22} className="text-white hidden md:block opacity-80 hover:opacity-100 transition-opacity" />
           </div>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {isAdmin && (
             <div className="relative">
               <button 
                 onClick={() => setShowAdminMenu(!showAdminMenu)}
-                className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-zinc-800 transition-all shadow-lg border border-white/10"
+                className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-zinc-800 transition-all shadow-lg border border-white/10"
                 title="Admin Options"
               >
-                <MoreVertical size={20} />
+                <MoreVertical size={18} className="md:hidden" />
+                <MoreVertical size={20} className="hidden md:block" />
               </button>
 
               <AnimatePresence>
@@ -1631,7 +1632,7 @@ export default function App() {
           
           <div className="flex flex-col items-center gap-2">
             <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em]">Proudly made by Bihari</p>
-            <p className="text-red-500 text-xs font-bold uppercase tracking-[0.3em]">Developed by AYUSH</p>
+            <p className="text-red-500 text-sm font-black uppercase tracking-[0.3em] bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Developed by AYUSH</p>
           </div>
           
           <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
