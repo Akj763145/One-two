@@ -679,6 +679,34 @@ const Navbar: React.FC<{
   );
 };
 
+const MeshOrb = () => (
+  <div className="relative w-8 h-8 flex-shrink-0">
+    <motion.div 
+      animate={{ 
+        scale: [1, 1.08, 1],
+        rotate: [0, 90, 180, 270, 360],
+      }}
+      transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+      className="w-full h-full rounded-full relative overflow-hidden shadow-lg"
+      style={{
+        background: 'radial-gradient(circle at 30% 30%, #fca5a5, #991b1b)',
+        boxShadow: 'inset -4px -4px 8px rgba(0,0,0,0.5), 2px 2px 4px rgba(255,255,255,0.3), 0 4px 12px rgba(220, 38, 38, 0.3)'
+      }}
+    >
+      <motion.div 
+        animate={{ 
+          x: ['-30%', '30%', '-30%'],
+          y: ['-30%', '30%', '-30%'],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.9),transparent_60%)]"
+      />
+      <div className="absolute inset-0 bg-gradient-to-tr from-red-400/20 to-transparent mix-blend-overlay" />
+    </motion.div>
+  </div>
+);
+
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -1101,26 +1129,35 @@ export default function App() {
   return (
     <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
       <Toaster 
-        theme="dark" 
         position="top-center" 
-        richColors 
+        expand={true}
         toastOptions={{
           style: {
-            background: '#0a0a0a',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#fff',
-            borderRadius: '12px',
+            background: 'rgba(220, 38, 38, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50px',
+            padding: '12px 24px',
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '14px',
+            fontFamily: 'Inter, sans-serif',
+            boxShadow: '0px 10px 30px rgba(220, 38, 38, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            minWidth: '320px',
           },
           success: {
-            style: {
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-            },
+            icon: <MeshOrb />,
           },
           error: {
-            style: {
-              border: '1px solid rgba(239, 68, 68, 0.8)',
-            },
+            icon: <MeshOrb />,
           },
+          loading: {
+            icon: <MeshOrb />,
+          },
+          className: "fluid-mesh-toast",
         }}
       />
       <AnimatePresence>
@@ -1850,7 +1887,7 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
   }, [movies]);
 
   const handleDeleteReview = async (reviewId: string, movieId: string) => {
-    try {
+    const deletePromise = async () => {
       if (supabase) {
         const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
         if (error) throw error;
@@ -1863,10 +1900,13 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
         }
       }
       setAllReviews(prev => prev.filter(r => r.id !== reviewId));
-      toast.success('Review deleted');
-    } catch (err) {
-      toast.error('Failed to delete review');
-    }
+    };
+
+    toast.promise(deletePromise(), {
+      loading: 'Deleting review...',
+      success: 'Review deleted successfully',
+      error: 'Failed to delete review',
+    });
   };
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>;
@@ -1875,31 +1915,40 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
     <div className="space-y-6">
       {allReviews.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {allReviews.map(review => (
-            <div key={review.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-sm font-bold text-white">{review.user_name}</span>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Star size={12} fill="currentColor" />
-                    <span className="text-xs font-bold">{review.rating}</span>
-                  </div>
-                  <span className="text-[10px] text-white/30 uppercase tracking-widest">on {review.movieTitle}</span>
-                </div>
-                <p className="text-sm text-white/70 leading-relaxed italic">"{review.text}"</p>
-                <p className="text-[10px] text-white/20 mt-3 uppercase tracking-wider">
-                  {review.created_at ? new Date(review.created_at).toLocaleDateString() : 'Unknown date'}
-                </p>
-              </div>
-              <button 
-                onClick={() => handleDeleteReview(review.id, review.movie_id)}
-                className="self-start p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors"
-                title="Delete Review"
+          <AnimatePresence mode="popLayout">
+            {allReviews.map(review => (
+              <motion.div 
+                key={review.id} 
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between gap-6"
               >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-bold text-white">{review.user_name}</span>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      <Star size={12} fill="currentColor" />
+                      <span className="text-xs font-bold">{review.rating}</span>
+                    </div>
+                    <span className="text-[10px] text-white/30 uppercase tracking-widest">on {review.movieTitle}</span>
+                  </div>
+                  <p className="text-sm text-white/70 leading-relaxed italic">"{review.text}"</p>
+                  <p className="text-[10px] text-white/20 mt-3 uppercase tracking-wider">
+                    {review.created_at ? new Date(review.created_at).toLocaleDateString() : 'Unknown date'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => handleDeleteReview(review.id, review.movie_id)}
+                  className="self-start p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors"
+                  title="Delete Review"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       ) : (
         <div className="text-center py-20 opacity-30">
@@ -2592,8 +2641,8 @@ const MovieDetailModal: React.FC<{
               <h3 className="text-2xl font-bold tracking-tight text-white">User Reviews</h3>
               <div className="flex items-center gap-2 text-white/40 text-sm">
                 <Star size={16} className="text-white fill-current" />
-                <span className="font-bold text-white">4.8</span>
-                <span>(1.2k reviews)</span>
+                <span className="font-bold text-white">{avgRating}</span>
+                <span>({reviews.length} reviews)</span>
               </div>
             </div>
 
