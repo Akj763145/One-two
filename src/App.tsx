@@ -501,10 +501,10 @@ const Navbar: React.FC<{
   }, []);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 md:px-16 py-4 flex items-center justify-between ${
+    <nav className={`fixed top-4 left-4 right-4 z-50 transition-all duration-500 px-6 md:px-12 py-3 flex items-center justify-between rounded-2xl border border-white/10 backdrop-blur-xl ${
       isScrolled 
-        ? 'bg-black/95 border-b border-white/10 py-3' 
-        : 'bg-black/60 border-b border-white/5'
+        ? 'bg-black/80 shadow-2xl shadow-black/80 py-2.5' 
+        : 'bg-gradient-to-b from-black/90 via-black/40 to-transparent'
     }`}>
       <div className={`flex items-center gap-8 md:gap-12 flex-shrink-0 transition-all duration-300 ${isSearchActive ? 'opacity-0 -translate-x-10 pointer-events-none' : 'opacity-100 translate-x-0'}`}>
         <div className="cursor-pointer" onClick={() => { setSearchQuery(''); setIsSearchActive(false); setActiveCategory('All'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
