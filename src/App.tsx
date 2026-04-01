@@ -41,9 +41,18 @@ interface Movie {
   match_score?: number;
 }
 
+interface AuditLog {
+  id: string;
+  action: 'create' | 'update' | 'delete' | 'bulk_update' | 'bulk_delete';
+  entity: 'movie';
+  details: string;
+  admin_email: string;
+  timestamp: string;
+}
+
 const AdminSidebar: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
@@ -51,6 +60,7 @@ const AdminSidebar: React.FC<{
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-red-500' },
     { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
     { id: 'feedback', label: 'Feedback', icon: Users, color: 'text-emerald-500' },
+    { id: 'logs', label: 'Audit Logs', icon: Activity, color: 'text-amber-500' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'text-purple-500' },
   ] as const;
 
@@ -111,7 +121,7 @@ const Dashboard: React.FC<{
   onView: (id: string) => void,
   onShowDetails: (m: Movie) => void,
   searchQuery: string,
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void
 }> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab }) => {
   const stats = useMemo(() => {
     const totalMovies = movies.length;
@@ -329,8 +339,8 @@ const Dashboard: React.FC<{
 };
 
 const AdminMobileNav: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
@@ -338,36 +348,37 @@ const AdminMobileNav: React.FC<{
     { id: 'dashboard', label: 'Stats', icon: BarChart3 },
     { id: 'movies', label: 'Movies', icon: Film },
     { id: 'feedback', label: 'Users', icon: Users },
+    { id: 'logs', label: 'Logs', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/5 z-[100] lg:hidden px-4 py-2 pb-safe">
-      <div className="flex items-center justify-between gap-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/5 z-[100] lg:hidden px-2 py-2 pb-safe">
+      <div className="flex items-center justify-between gap-1">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-all ${
+            className={`flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl transition-all ${
               activeTab === item.id ? 'text-red-500' : 'text-white/40'
             }`}
           >
-            <item.icon size={20} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+            <item.icon size={18} />
+            <span className="text-[8px] font-black uppercase tracking-tighter truncate w-full text-center">{item.label}</span>
           </button>
         ))}
-        <div className="w-px h-8 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-white/10 mx-0.5" />
         <button
           onClick={onAddClick}
-          className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/20 active:scale-90 transition-transform"
+          className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/20 active:scale-90 transition-transform shrink-0"
         >
-          <Plus size={20} />
+          <Plus size={18} />
         </button>
         <button
           onClick={onLogout}
-          className="w-10 h-10 rounded-full bg-white/5 text-white/40 flex items-center justify-center hover:text-red-500 transition-colors"
+          className="w-9 h-9 rounded-full bg-white/5 text-white/40 flex items-center justify-center hover:text-red-500 transition-colors shrink-0"
         >
-          <LogOut size={18} />
+          <LogOut size={16} />
         </button>
       </div>
     </div>
@@ -726,7 +737,8 @@ export default function App() {
   const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings'>('dashboard');
+  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs'>('dashboard');
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [seoSettings, setSeoSettings] = useState({
     title: 'Movie Wallah - Download any movie Here',
     description: 'Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.',
@@ -773,8 +785,48 @@ export default function App() {
       }
     };
 
+    const fetchAuditLogs = async () => {
+      try {
+        if (supabase) {
+          const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(100);
+          if (data) setAuditLogs(data);
+        } else {
+          const localLogs = localStorage.getItem('movieWallah_audit_logs');
+          if (localLogs) setAuditLogs(JSON.parse(localLogs));
+        }
+      } catch (err) {
+        console.error('Error fetching audit logs:', err);
+        const localLogs = localStorage.getItem('movieWallah_audit_logs');
+        if (localLogs) setAuditLogs(JSON.parse(localLogs));
+      }
+    };
+
     fetchSeoSettings();
+    fetchAuditLogs();
   }, []);
+
+  const addAuditLog = async (action: AuditLog['action'], details: string) => {
+    const newLog: AuditLog = {
+      id: Date.now().toString(),
+      action,
+      entity: 'movie',
+      details,
+      admin_email: 'Admin User',
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      if (supabase) {
+        await supabase.from('audit_logs').insert([newLog]);
+      }
+    } catch (err) {
+      console.error('Error saving audit log to Supabase:', err);
+    }
+    
+    setAuditLogs(prev => [newLog, ...prev].slice(0, 100));
+    const currentLogs = JSON.parse(localStorage.getItem('movieWallah_audit_logs') || '[]');
+    localStorage.setItem('movieWallah_audit_logs', JSON.stringify([newLog, ...currentLogs].slice(0, 100)));
+  };
 
   useEffect(() => {
     // Apply SEO settings to the document
@@ -1009,8 +1061,10 @@ export default function App() {
     if (!supabase) {
       if (editingMovie) {
         setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+        addAuditLog('update', `Updated movie: ${movieData.title}`);
       } else {
         setMovies([{ ...movieData, id: Date.now().toString() }, ...movies]);
+        addAuditLog('create', `Added new movie: ${movieData.title}`);
       }
     } else {
       if (editingMovie) {
@@ -1020,6 +1074,7 @@ export default function App() {
           return setErrorMsg('Error updating movie: ' + error.message);
         }
         setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+        addAuditLog('update', `Updated movie: ${movieData.title}`);
         toast.success('Movie updated successfully');
       } else {
         const { data, error } = await supabase.from('movies').insert([movieData]).select('*');
@@ -1027,9 +1082,12 @@ export default function App() {
           toast.error('Error adding movie: ' + error.message);
           return setErrorMsg('Error adding movie: ' + error.message);
         }
-        if (data && data.length > 0) setMovies([...data, ...movies]);
-        else {
+        if (data && data.length > 0) {
+          setMovies([...data, ...movies]);
+          addAuditLog('create', `Added new movie: ${movieData.title}`);
+        } else {
           setMovies([{ ...movieData, id: Date.now().toString(), downloads: 0, views: 0 }, ...movies]);
+          addAuditLog('create', `Added new movie: ${movieData.title}`);
           fetchMovies();
         }
         toast.success('Movie added successfully');
@@ -1064,8 +1122,10 @@ export default function App() {
 
   const confirmDelete = async () => {
     if (!movieToDelete) return;
+    const movie = movies.find(m => m.id === movieToDelete);
     if (supabase) await supabase.from('movies').delete().eq('id', movieToDelete);
     setMovies(movies.filter(m => m.id !== movieToDelete));
+    addAuditLog('delete', `Deleted movie: ${movie?.title || movieToDelete}`);
     setMovieToDelete(null);
     toast.success('Movie deleted successfully');
   };
@@ -1081,6 +1141,7 @@ export default function App() {
         setMovies(updatedMovies);
         localStorage.setItem('movieWallah_movies', JSON.stringify(updatedMovies));
       }
+      addAuditLog('bulk_update', `Bulk updated ${ids.length} movies: ${Object.keys(updates).join(', ')}`);
       toast.success(`Updated ${ids.length} movies`);
     } catch (err: any) {
       toast.error('Bulk update failed: ' + (err.message || 'Unknown error'));
@@ -1098,6 +1159,7 @@ export default function App() {
         setMovies(updatedMovies);
         localStorage.setItem('movieWallah_movies', JSON.stringify(updatedMovies));
       }
+      addAuditLog('bulk_delete', `Bulk deleted ${ids.length} movies`);
       toast.success(`Deleted ${ids.length} movies`);
     } catch (err: any) {
       toast.error('Bulk delete failed: ' + (err.message || 'Unknown error'));
@@ -1286,6 +1348,17 @@ export default function App() {
                           <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Community Reviews & Ratings</p>
                         </div>
                         <FeedbackManager movies={movies} />
+                      </div>
+                    )}
+                    {adminView === 'logs' && (
+                      <div className="px-6 md:px-16 pt-12 pb-20">
+                        <div className="mb-12">
+                          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                            <Activity className="text-amber-500" size={32} /> Audit Logs
+                          </h2>
+                          <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">System Activity & Security Tracking</p>
+                        </div>
+                        <AuditLogManager logs={auditLogs} />
                       </div>
                     )}
                     {adminView === 'settings' && (
@@ -2003,6 +2076,106 @@ const MovieManagement: React.FC<{
           <p className="text-white/50">Try adjusting your search or add a new movie.</p>
         </div>
       )}
+    </div>
+  );
+};
+
+const AuditLogManager: React.FC<{ logs: AuditLog[] }> = ({ logs }) => {
+  return (
+    <div className="bg-zinc-900/50 rounded-3xl border border-white/5 overflow-hidden">
+      {/* Mobile View: Card List */}
+      <div className="md:hidden divide-y divide-white/5">
+        {logs.length > 0 ? logs.map((log) => (
+          <div key={log.id} className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                log.action === 'create' ? 'bg-emerald-500/10 text-emerald-500' :
+                log.action === 'update' ? 'bg-blue-500/10 text-blue-500' :
+                log.action === 'delete' ? 'bg-red-500/10 text-red-500' :
+                'bg-amber-500/10 text-amber-500'
+              }`}>
+                {log.action.replace('_', ' ')}
+              </span>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-white/80">{new Date(log.timestamp).toLocaleDateString()}</p>
+                <p className="text-[9px] text-white/30 font-mono">{new Date(log.timestamp).toLocaleTimeString()}</p>
+              </div>
+            </div>
+            <p className="text-xs text-white/60 leading-relaxed">{log.details}</p>
+            <div className="flex items-center gap-2 pt-1">
+              <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold">
+                {log.admin_email[0].toUpperCase()}
+              </div>
+              <span className="text-[10px] font-bold text-white/40">{log.admin_email}</span>
+            </div>
+          </div>
+        )) : (
+          <div className="px-6 py-20 text-center">
+            <Activity size={40} className="mx-auto mb-4 text-white/10" />
+            <p className="text-sm text-white/30 font-bold">No audit logs found yet.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop View: Table */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-white/5 bg-white/5">
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Timestamp</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Action</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Details</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white/40">Admin</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {logs.length > 0 ? logs.map((log) => (
+              <tr key={log.id} className="hover:bg-white/5 transition-colors group">
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-white/80">
+                      {new Date(log.timestamp).toLocaleDateString()}
+                    </span>
+                    <span className="text-[10px] text-white/30 font-mono">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                    log.action === 'create' ? 'bg-emerald-500/10 text-emerald-500' :
+                    log.action === 'update' ? 'bg-blue-500/10 text-blue-500' :
+                    log.action === 'delete' ? 'bg-red-500/10 text-red-500' :
+                    'bg-amber-500/10 text-amber-500'
+                  }`}>
+                    {log.action.replace('_', ' ')}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <p className="text-xs text-white/60 line-clamp-1 group-hover:line-clamp-none transition-all">
+                    {log.details}
+                  </p>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
+                      {log.admin_email[0].toUpperCase()}
+                    </div>
+                    <span className="text-[10px] font-bold text-white/40">{log.admin_email}</span>
+                  </div>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-20 text-center">
+                  <Activity size={40} className="mx-auto mb-4 text-white/10" />
+                  <p className="text-sm text-white/30 font-bold">No audit logs found yet.</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
