@@ -458,7 +458,7 @@ const Logo: React.FC<{ className?: string, showText?: boolean }> = ({ className 
             <span className="text-current font-bold text-base md:text-2xl tracking-tight uppercase">Wallah</span>
           </div>
           <div className="flex flex-col mt-0.5 leading-tight">
-            <span className="text-[6px] md:text-[9px] text-current opacity-40 tracking-[0.15em] uppercase font-medium">
+            <span className="text-[6px] md:text-[9px] text-current opacity-100 tracking-[0.15em] uppercase font-bold bg-white/10 px-1 rounded-sm w-fit mb-0.5">
               Proudly made by Bihari
             </span>
             <span className="text-[7px] md:text-[10px] text-red-500 tracking-[0.2em] uppercase font-black bg-red-500/10 px-1 rounded-sm w-fit">
@@ -1631,8 +1631,8 @@ export default function App() {
           <Logo className="scale-125" />
           
           <div className="flex flex-col items-center gap-2">
-            <p className="text-white/40 text-sm font-medium uppercase tracking-[0.2em]">Proudly made by Bihari</p>
-            <p className="text-red-500 text-sm font-black uppercase tracking-[0.3em] bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">Developed by AYUSH</p>
+            <p className="text-white text-sm font-black uppercase tracking-[0.2em] bg-white/10 px-4 py-1.5 rounded-full border border-white/20 shadow-lg">Proudly made by Bihari</p>
+            <p className="text-red-500 text-sm font-black uppercase tracking-[0.3em] bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 shadow-lg">Developed by AYUSH</p>
           </div>
           
           <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
