@@ -414,26 +414,92 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
   return (
     <motion.div
       initial={{ opacity: 1 }}
-      animate={{ opacity: 0 }}
-      transition={{ delay: 2.5, duration: 1, ease: "easeInOut" }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
       onAnimationComplete={onComplete}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black transition-colors duration-500"
+      className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden"
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0, filter: 'blur(10px)' }}
-        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-        className="flex flex-col items-center"
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 1, ease: "easeOut" }}
+        className="flex flex-col items-center gap-6"
       >
-        <Logo className="scale-150" />
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
+        <div className="relative w-32 h-32 md:w-48 md:h-48 flex items-center justify-center">
+          <svg viewBox="0 0 512 512" className="w-full h-full text-white">
+            <motion.circle 
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              cx="256" cy="256" r="230" fill="none" stroke="currentColor" strokeWidth="20" 
+            />
+            <motion.path 
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
+              d="M 436 182 A 195 195 0 0 0 76 182" fill="none" stroke="#e53935" strokeWidth="12" 
+            />
+            <motion.path 
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
+              d="M 76 330 A 195 195 0 0 0 436 330" fill="none" stroke="#e53935" strokeWidth="12" 
+            />
+            <motion.text 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              x="256" y="190" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="currentColor" textAnchor="middle" dominantBaseline="central" fontWeight="bold"
+            >M</motion.text>
+            <motion.text 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1 }}
+              x="256" y="340" fontFamily="'Times New Roman', Times, serif" fontSize="200" fill="currentColor" textAnchor="middle" dominantBaseline="central" fontWeight="bold"
+            >W</motion.text>
+          </svg>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.8 }}
-          className="text-white/50 tracking-[0.2em] uppercase text-sm mt-12 font-medium"
+          transition={{ duration: 0.8, delay: 1.2 }}
+          className="flex flex-col items-center text-center"
         >
-          Movie Wallah Originals
-        </motion.p>
+          <div className="flex items-center gap-2 md:gap-4 leading-none mb-4">
+            <span className="text-red-600 font-bold text-3xl md:text-6xl tracking-tighter uppercase">Movie</span>
+            <span className="text-white font-bold text-3xl md:text-6xl tracking-tighter uppercase">Wallah</span>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <motion.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 1.8 }}
+              className="text-xs md:text-sm text-white/60 tracking-[0.3em] uppercase font-bold bg-white/5 px-4 py-1.5 rounded-full border border-white/10"
+            >
+              Proudly made by Bihari
+            </motion.span>
+            <motion.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 2.1 }}
+              className="text-xs md:text-sm text-red-500 tracking-[0.4em] uppercase font-black bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 shadow-lg shadow-red-500/10"
+            >
+              Developed by AYUSH
+            </motion.span>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.1 }}
+        transition={{ duration: 2 }}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-red-600 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-red-900 rounded-full blur-[120px]" />
       </motion.div>
     </motion.div>
   );
@@ -719,8 +785,16 @@ const MeshOrb = () => (
   </div>
 );
 
+
 export default function App() {
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1274,7 +1348,9 @@ export default function App() {
         }}
       />
       <AnimatePresence>
-        {/* Welcome animation removed */}
+        {showWelcome && (
+          <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
+        )}
       </AnimatePresence>
 
       {/* Main Content */}
