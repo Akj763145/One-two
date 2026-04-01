@@ -1070,6 +1070,40 @@ export default function App() {
     toast.success('Movie deleted successfully');
   };
 
+  const handleBulkUpdate = async (ids: string[], updates: Partial<Movie>) => {
+    try {
+      if (supabase) {
+        const { error } = await supabase.from('movies').update(updates).in('id', ids);
+        if (error) throw error;
+        setMovies(prev => prev.map(m => ids.includes(m.id) ? { ...m, ...updates } : m));
+      } else {
+        const updatedMovies = movies.map(m => ids.includes(m.id) ? { ...m, ...updates } : m);
+        setMovies(updatedMovies);
+        localStorage.setItem('movieWallah_movies', JSON.stringify(updatedMovies));
+      }
+      toast.success(`Updated ${ids.length} movies`);
+    } catch (err: any) {
+      toast.error('Bulk update failed: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      if (supabase) {
+        const { error } = await supabase.from('movies').delete().in('id', ids);
+        if (error) throw error;
+        setMovies(prev => prev.filter(m => !ids.includes(m.id)));
+      } else {
+        const updatedMovies = movies.filter(m => !ids.includes(m.id));
+        setMovies(updatedMovies);
+        localStorage.setItem('movieWallah_movies', JSON.stringify(updatedMovies));
+      }
+      toast.success(`Deleted ${ids.length} movies`);
+    } catch (err: any) {
+      toast.error('Bulk delete failed: ' + (err.message || 'Unknown error'));
+    }
+  };
+
   const handleDownload = async (movieId: string) => {
     const movie = movies.find(m => m.id === movieId);
     if (!movie) return;
@@ -1239,6 +1273,8 @@ export default function App() {
                         onView={handleView} 
                         onShowDetails={setSelectedMovieForDetails} 
                         searchQuery={searchQuery} 
+                        onBulkUpdate={handleBulkUpdate}
+                        onBulkDelete={handleBulkDelete}
                       />
                     )}
                     {adminView === 'feedback' && (
@@ -1790,14 +1826,59 @@ const MovieManagement: React.FC<{
   onDownload: (id: string) => void,
   onView: (id: string) => void,
   onShowDetails: (m: Movie) => void,
-  searchQuery: string
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery }) => {
+  searchQuery: string,
+  onBulkUpdate: (ids: string[], updates: Partial<Movie>) => Promise<void>,
+  onBulkDelete: (ids: string[]) => Promise<void>
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onBulkUpdate, onBulkDelete }) => {
   const [localSearch, setLocalSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const filteredMovies = movies.filter(m => 
     m.title.toLowerCase().includes(localSearch.toLowerCase()) ||
     m.category.toLowerCase().includes(localSearch.toLowerCase())
   );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredMovies.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredMovies.map(m => m.id));
+    }
+  };
+
+  const handleBulkAction = async (action: 'delete' | 'feature' | 'unfeature' | 'trending' | 'untrending') => {
+    if (selectedIds.length === 0) return;
+    
+    setIsProcessing(true);
+    try {
+      if (action === 'delete') {
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} movies?`)) {
+          await onBulkDelete(selectedIds);
+          setSelectedIds([]);
+        }
+      } else {
+        const updates: Partial<Movie> = {};
+        if (action === 'feature') updates.is_hero = true;
+        if (action === 'unfeature') updates.is_hero = false;
+        if (action === 'trending') updates.is_trending = true;
+        if (action === 'untrending') updates.is_trending = false;
+        
+        await onBulkUpdate(selectedIds, updates);
+        setSelectedIds([]);
+      }
+    } catch (err) {
+      console.error('Bulk action failed:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="px-6 md:px-16 pt-12 pb-20">
@@ -1809,17 +1890,93 @@ const MovieManagement: React.FC<{
           <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Catalog Control & Editing</p>
         </div>
         
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
-          <input 
-            type="text" 
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="Search catalog..." 
-            className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all w-full md:w-80"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+            <input 
+              type="text" 
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search catalog..." 
+              className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all w-full md:w-80"
+            />
+          </div>
+          
+          <button 
+            onClick={toggleSelectAll}
+            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+          >
+            {selectedIds.length === filteredMovies.length ? 'Deselect All' : 'Select All'}
+          </button>
         </div>
       </div>
+
+      {/* Bulk Actions Toolbar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-4xl bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-600 flex items-center justify-center text-white font-bold">
+                {selectedIds.length}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Movies Selected</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider">Choose an action to apply</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button 
+                disabled={isProcessing}
+                onClick={() => handleBulkAction('feature')}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Mark Featured
+              </button>
+              <button 
+                disabled={isProcessing}
+                onClick={() => handleBulkAction('trending')}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Mark Trending
+              </button>
+              <div className="w-px h-8 bg-white/10 mx-1 hidden md:block" />
+              <button 
+                disabled={isProcessing}
+                onClick={() => handleBulkAction('unfeature')}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Remove Featured
+              </button>
+              <button 
+                disabled={isProcessing}
+                onClick={() => handleBulkAction('untrending')}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Remove Trending
+              </button>
+              <button 
+                disabled={isProcessing}
+                onClick={() => handleBulkAction('delete')}
+                className="px-4 py-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 text-red-500 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+              >
+                Delete Selected
+              </button>
+              <button 
+                onClick={() => setSelectedIds([])}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {filteredMovies.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -1834,6 +1991,8 @@ const MovieManagement: React.FC<{
               onView={onView} 
               onShowDetails={onShowDetails} 
               searchQuery={searchQuery} 
+              isSelected={selectedIds.includes(movie.id)}
+              onSelect={toggleSelect}
             />
           ))}
         </div>
@@ -2193,17 +2352,30 @@ const MovieCard: React.FC<{
   onDownload: (id: string) => void, 
   onView: (id: string) => void, 
   onShowDetails: (m: Movie) => void,
-  searchQuery?: string
-}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '' }) => {
+  searchQuery?: string,
+  isSelected?: boolean,
+  onSelect?: (id: string) => void
+}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect }) => {
   const query = searchQuery.toLowerCase().trim();
   const matchesCast = query && movie.cast?.toLowerCase().includes(query);
   const matchesDirector = query && movie.director?.toLowerCase().includes(query);
 
   return (
     <div
-      className="flex flex-col gap-3 group w-full transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+      className={`flex flex-col gap-3 group w-full transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] relative ${isSelected ? 'scale-[0.98]' : ''}`}
     >
-      <div className="rounded-2xl bg-zinc-900 overflow-hidden shadow-lg">
+      {isAdmin && onSelect && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(movie.id);
+          }}
+          className={`absolute top-3 left-3 z-30 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer shadow-lg ${isSelected ? 'bg-red-600 border-red-600' : 'bg-black/60 border-white/20 hover:border-white/40'}`}
+        >
+          {isSelected && <Plus size={16} className="text-white rotate-45" />}
+        </div>
+      )}
+      <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
         <div 
           onClick={() => onShowDetails(movie)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
