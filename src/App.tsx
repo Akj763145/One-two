@@ -786,19 +786,35 @@ export default function App() {
     };
 
     const fetchAuditLogs = async () => {
-      try {
-        if (supabase) {
+      let logs: AuditLog[] = [];
+      
+      // Try fetching from Supabase first
+      if (supabase) {
+        try {
           const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(100);
-          if (data) setAuditLogs(data);
-        } else {
-          const localLogs = localStorage.getItem('movieWallah_audit_logs');
-          if (localLogs) setAuditLogs(JSON.parse(localLogs));
+          if (data && data.length > 0) {
+            logs = data;
+          } else if (error) {
+            console.warn('Supabase audit logs fetch error:', error.message);
+          }
+        } catch (err) {
+          console.error('Error fetching audit logs from Supabase:', err);
         }
-      } catch (err) {
-        console.error('Error fetching audit logs:', err);
-        const localLogs = localStorage.getItem('movieWallah_audit_logs');
-        if (localLogs) setAuditLogs(JSON.parse(localLogs));
       }
+
+      // If no logs from Supabase (or Supabase failed), try localStorage
+      if (logs.length === 0) {
+        const localLogs = localStorage.getItem('movieWallah_audit_logs');
+        if (localLogs) {
+          try {
+            logs = JSON.parse(localLogs);
+          } catch (e) {
+            console.error('Error parsing local audit logs:', e);
+          }
+        }
+      }
+
+      setAuditLogs(logs);
     };
 
     fetchSeoSettings();
