@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -830,6 +830,7 @@ export default function App() {
   }, []);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
@@ -1210,6 +1211,7 @@ export default function App() {
   const handleSaveMovie = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setIsActionLoading(true);
     
     const movieData = { ...formData };
 
@@ -1252,6 +1254,7 @@ export default function App() {
     setShowAddEditModal(false);
     setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
     setEditingMovie(null);
+    setIsActionLoading(false);
   };
 
   const handleEdit = (movie: Movie) => {
@@ -1277,15 +1280,18 @@ export default function App() {
 
   const confirmDelete = async () => {
     if (!movieToDelete) return;
+    setIsActionLoading(true);
     const movie = movies.find(m => m.id === movieToDelete);
     if (supabase) await supabase.from('movies').delete().eq('id', movieToDelete);
     setMovies(movies.filter(m => m.id !== movieToDelete));
     addAuditLog('delete', `Deleted movie: ${movie?.title || movieToDelete}`);
     setMovieToDelete(null);
+    setIsActionLoading(false);
     toast.success('Movie deleted successfully');
   };
 
   const handleBulkUpdate = async (ids: string[], updates: Partial<Movie>) => {
+    setIsActionLoading(true);
     try {
       if (supabase) {
         const { error } = await supabase.from('movies').update(updates).in('id', ids);
@@ -1300,10 +1306,13 @@ export default function App() {
       toast.success(`Updated ${ids.length} movies`);
     } catch (err: any) {
       toast.error('Bulk update failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
+    setIsActionLoading(true);
     try {
       if (supabase) {
         const { error } = await supabase.from('movies').delete().in('id', ids);
@@ -1318,6 +1327,8 @@ export default function App() {
       toast.success(`Deleted ${ids.length} movies`);
     } catch (err: any) {
       toast.error('Bulk delete failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -1689,9 +1700,13 @@ export default function App() {
                           <div 
                             className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
                           >
-                            {currentMovies.map(movie => (
-                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
-                            ))}
+                            {isLoading ? (
+                              Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
+                            ) : (
+                              currentMovies.map(movie => (
+                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
+                              ))
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -1750,9 +1765,13 @@ export default function App() {
                         <div 
                           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
                         >
-                          {currentMovies.map((movie) => (
-                            <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
-                          ))}
+                          {isLoading ? (
+                            Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
+                          ) : (
+                            currentMovies.map((movie) => (
+                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1805,7 +1824,9 @@ export default function App() {
               <form onSubmit={handleAdminLogin}>
                 <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Password" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current placeholder-current/30 focus:outline-none focus:ring-2 focus:ring-current/50 transition-all mb-4" autoFocus />
                 {errorMsg && <p className="text-red-400 text-xs mb-4 text-center">{errorMsg}</p>}
-                <button type="submit" className="w-full bg-white text-black font-bold rounded-xl py-3 hover:opacity-90 transition-opacity">Unlock</button>
+                <button type="submit" disabled={isActionLoading} className="w-full bg-white text-black font-bold rounded-xl py-3 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                  {isActionLoading ? <Spinner size={18} /> : 'Unlock'}
+                </button>
               </form>
             </motion.div>
           </motion.div>
@@ -1978,8 +1999,8 @@ export default function App() {
 
                 <div className="pt-6 flex flex-col sm:flex-row gap-3 shrink-0 mt-auto">
                   <button type="button" onClick={() => setShowAddEditModal(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-current font-bold rounded-xl py-4 transition-colors order-2 sm:order-1">Cancel</button>
-                  <button type="submit" className="flex-1 bg-white text-black hover:bg-red-600 hover:text-white font-bold rounded-xl py-4 transition-all order-1 sm:order-2 shadow-xl shadow-white/5">
-                    {editingMovie ? 'Save Changes' : 'Add Movie'}
+                  <button type="submit" disabled={isActionLoading} className="flex-1 bg-white text-black hover:bg-red-600 hover:text-white font-bold rounded-xl py-4 transition-all order-1 sm:order-2 shadow-xl shadow-white/5 flex items-center justify-center gap-2">
+                    {isActionLoading ? <Spinner size={18} /> : (editingMovie ? 'Save Changes' : 'Add Movie')}
                   </button>
                 </div>
               </form>
@@ -2017,10 +2038,10 @@ export default function App() {
                 Are you sure you want to delete <span className="text-white font-bold">"{movies.find(m => m.id === movieToDelete)?.title}"</span>? This action is permanent and cannot be undone.
               </p>
               <div className="flex flex-col gap-3">
-                <button onClick={confirmDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl py-4 transition-all shadow-lg shadow-red-600/20 active:scale-95">
-                  Yes, Delete Permanently
+                <button onClick={confirmDelete} disabled={isActionLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl py-4 transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2">
+                  {isActionLoading ? <Spinner size={18} /> : 'Yes, Delete Permanently'}
                 </button>
-                <button onClick={() => setMovieToDelete(null)} className="w-full bg-white/5 hover:bg-white/10 text-white/70 font-bold rounded-xl py-4 transition-colors">
+                <button onClick={() => setMovieToDelete(null)} disabled={isActionLoading} className="w-full bg-white/5 hover:bg-white/10 text-white/70 font-bold rounded-xl py-4 transition-colors">
                   Cancel
                 </button>
               </div>
@@ -2164,38 +2185,38 @@ const MovieManagement: React.FC<{
               <button 
                 disabled={isProcessing}
                 onClick={() => handleBulkAction('feature')}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                Mark Featured
+                {isProcessing ? <Spinner size={12} /> : null} Mark Featured
               </button>
               <button 
                 disabled={isProcessing}
                 onClick={() => handleBulkAction('trending')}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                Mark Trending
+                {isProcessing ? <Spinner size={12} /> : null} Mark Trending
               </button>
               <div className="w-px h-8 bg-white/10 mx-1 hidden md:block" />
               <button 
                 disabled={isProcessing}
                 onClick={() => handleBulkAction('unfeature')}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                Remove Featured
+                {isProcessing ? <Spinner size={12} /> : null} Remove Featured
               </button>
               <button 
                 disabled={isProcessing}
                 onClick={() => handleBulkAction('untrending')}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                Remove Trending
+                {isProcessing ? <Spinner size={12} /> : null} Remove Trending
               </button>
               <button 
                 disabled={isProcessing}
                 onClick={() => handleBulkAction('delete')}
-                className="px-4 py-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 text-red-500 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 text-red-500 text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                Delete Selected
+                {isProcessing ? <Spinner size={12} /> : null} Delete Selected
               </button>
               <button 
                 onClick={() => setSelectedIds([])}
@@ -2673,6 +2694,20 @@ const MoviePoster: React.FC<{
     </div>
   );
 };
+
+const Spinner: React.FC<{ size?: number, className?: string }> = ({ size = 20, className = "" }) => (
+  <Loader size={size} className={`animate-spin ${className}`} />
+);
+
+const MovieSkeleton: React.FC = () => (
+  <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-white/5 border border-white/10 animate-pulse">
+    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+    <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
+      <div className="h-4 bg-white/10 rounded w-3/4" />
+      <div className="h-3 bg-white/5 rounded w-1/2" />
+    </div>
+  </div>
+);
 
 const MovieCard: React.FC<{ 
   movie: Movie, 
@@ -3191,9 +3226,9 @@ const MovieDetailModal: React.FC<{
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-white text-black font-black py-4 px-10 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50 active:scale-95 text-lg shadow-xl"
+                  className="bg-white text-black font-black py-4 px-10 rounded-lg hover:bg-white/90 transition-all disabled:opacity-50 active:scale-95 text-lg shadow-xl flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? 'Posting...' : 'Submit Review'}
+                  {isSubmitting ? <Spinner size={18} /> : 'Submit Review'}
                 </button>
               </div>
             </form>
