@@ -93,3 +93,34 @@
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }
+
+/* Modern Video.js Overrides */
+.video-js {
+  font-family: var(--font-sans) !important;
+}
+
+.video-js .vjs-control-bar {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-js .vjs-big-play-button {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 50% !important;
+  width: 80px !important;
+  height: 80px !important;
+  line-height: 80px !important;
+  margin-top: -40px !important;
+  margin-left: -40px !important;
+}
+
+.video-js .vjs-slider {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.video-js .vjs-play-progress {
+  background-color: #fff !important;
+}
