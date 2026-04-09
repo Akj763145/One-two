@@ -1199,7 +1199,8 @@ export default function App() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (adminPassword === 'xxx') {
+    const expectedPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'xxx';
+    if (adminPassword === expectedPassword) {
       setIsAdmin(true);
       setShowAdminLogin(false);
       setAdminPassword('');
