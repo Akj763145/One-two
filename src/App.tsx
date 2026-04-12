@@ -1619,7 +1619,12 @@ export default function App() {
                 >
                   {featuredMovies.map((movie, index) => (
                     <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
-                      <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img" priority={index === 0} />
+                      <motion.div 
+                        layoutId={`movie-poster-${movie.id}`}
+                        className="absolute inset-0"
+                      >
+                        <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img h-full w-full object-cover" priority={index === 0} />
+                      </motion.div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
                       
                       <motion.div 
@@ -2668,7 +2673,7 @@ const MoviePoster: React.FC<{
   }, [src]);
 
   return (
-    <div className={`relative w-full aspect-[2/3] bg-zinc-900 overflow-hidden ${className}`}>
+    <div className={`relative w-full bg-zinc-900 overflow-hidden ${className.includes('aspect-') ? '' : 'aspect-[2/3]'} ${className}`}>
       {(!isLoaded && !hasError) && (
         <div className="absolute inset-0 shimmer z-10" />
       )}
@@ -2742,7 +2747,8 @@ const MovieCard: React.FC<{
         </div>
       )}
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
-        <div 
+        <motion.div 
+          layoutId={`movie-poster-${movie.id}`}
           onClick={() => onShowDetails(movie)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
@@ -2764,7 +2770,7 @@ const MovieCard: React.FC<{
             <h4 className="text-white font-bold text-sm mb-1">{movie.title}</h4>
             <p className="text-white/70 text-xs line-clamp-2 mb-2">{movie.description}</p>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="flex flex-col gap-2.5 px-1">
@@ -2995,15 +3001,11 @@ const MovieDetailModal: React.FC<{
             animate="visible"
             exit="hidden"
             variants={{
-              hidden: { opacity: 0, scale: 0.99, y: 10 },
+              hidden: { opacity: 0 },
               visible: {
                 opacity: 1,
-                scale: 1,
-                y: 0,
                 transition: {
-                  type: "spring",
-                  damping: 30,
-                  stiffness: 300,
+                  duration: 0.3,
                   staggerChildren: 0.05,
                   delayChildren: 0.1
                 }
@@ -3014,10 +3016,13 @@ const MovieDetailModal: React.FC<{
           {/* Hero Section */}
           <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
             {/* Poster Background */}
-            <div className="absolute inset-0 overflow-hidden">
-              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
+            <motion.div 
+              layoutId={`movie-poster-${movie.id}`}
+              className="absolute inset-0 overflow-hidden"
+            >
+              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-            </div>
+            </motion.div>
             
             {/* Content Overlay */}
             <div className="relative z-10 p-8 md:p-14 w-full">
