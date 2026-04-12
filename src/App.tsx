@@ -592,6 +592,34 @@ const Navbar: React.FC<{
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync local search with prop when it changes externally (e.g. cleared)
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce search query update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== searchQuery) {
+        setSearchQuery(localSearch);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearch, setSearchQuery, searchQuery]);
+
+  // Focus input when search becomes active
+  useEffect(() => {
+    if (isSearchActive) {
+      // Small delay to ensure the animation/render has started
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isSearchActive]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -643,15 +671,16 @@ const Navbar: React.FC<{
           <div className="relative group bg-black rounded-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 opacity-80 group-focus-within:opacity-100 transition-opacity" size={18} />
             <input 
-              type="text" 
-              value={searchQuery}
-              autoFocus={isSearchActive}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              ref={searchInputRef}
+              type="search" 
+              enterKeyHint="search"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               placeholder="Search movies, series, originals..." 
-              className="w-full bg-transparent border-none rounded-full pl-12 pr-12 py-3 text-sm focus:outline-none transition-all placeholder-white/30 text-white"
+              className="w-full bg-transparent border-none rounded-full pl-12 pr-12 py-3 text-sm focus:outline-none transition-all placeholder-white/30 text-white [appearance:none] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
             />
             <button 
-              onClick={() => { setIsSearchActive(false); setSearchQuery(''); }}
+              onClick={() => { setIsSearchActive(false); setLocalSearch(''); setSearchQuery(''); }}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors text-white"
             >
               <X size={18} className="opacity-50 hover:opacity-100" />
