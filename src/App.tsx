@@ -2807,7 +2807,7 @@ const MovieCard: React.FC<{
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => onView(movie.id)}
-                className="flex-1 bg-white text-black py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-700 text-white py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:from-emerald-400 hover:to-green-600 transition-all active:scale-95"
               >
                 <Play size={14} className="fill-current" /> Watch
               </a>

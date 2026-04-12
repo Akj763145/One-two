@@ -12,6 +12,8 @@
   --color-surface: #0A0A0A;
   --color-surface-hover: #111111;
   --color-accent: #E50914;
+  
+  --animate-spin-slow: spin 3s linear infinite;
 }
 
 @layer base {
