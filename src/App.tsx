@@ -119,7 +119,7 @@ const Dashboard: React.FC<{
   onDelete: (id: string) => void,
   onDownload: (id: string) => void,
   onView: (id: string) => void,
-  onShowDetails: (m: Movie) => void,
+  onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery: string,
   setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void
 }> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab }) => {
@@ -305,10 +305,14 @@ const Dashboard: React.FC<{
 
           <div className="space-y-4">
             {recentMovies.map(movie => (
-              <div key={movie.id} className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
-                <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+              <div 
+                key={movie.id} 
+                onClick={() => onShowDetails(movie, `movie-poster-${movie.id}-dash`)}
+                className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
+              >
+                <motion.div layoutId={`movie-poster-${movie.id}-dash`} className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
                   <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
+                </motion.div>
                 <div className="flex-1 min-w-0">
                   <h5 className="text-sm font-bold truncate">{movie.title}</h5>
                   <p className="text-[10px] text-white/40 uppercase tracking-wider">{movie.category} • {movie.release_year || 'N/A'}</p>
@@ -843,6 +847,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
+  const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -1196,6 +1201,11 @@ export default function App() {
     setIsLoading(false);
   };
 
+  const handleShowDetails = (movie: Movie, layoutId: string) => {
+    setSelectedMovieForDetails(movie);
+    setActiveLayoutId(layoutId);
+  };
+
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -1490,7 +1500,7 @@ export default function App() {
                         onDelete={setMovieToDelete} 
                         onDownload={handleDownload} 
                         onView={handleView} 
-                        onShowDetails={setSelectedMovieForDetails} 
+                        onShowDetails={handleShowDetails} 
                         searchQuery={searchQuery} 
                         setActiveTab={setAdminView}
                       />
@@ -1502,7 +1512,7 @@ export default function App() {
                         onDelete={setMovieToDelete} 
                         onDownload={handleDownload} 
                         onView={handleView} 
-                        onShowDetails={setSelectedMovieForDetails} 
+                        onShowDetails={handleShowDetails} 
                         searchQuery={searchQuery} 
                         onBulkUpdate={handleBulkUpdate}
                         onBulkDelete={handleBulkDelete}
@@ -1646,7 +1656,7 @@ export default function App() {
                             </a>
                           )}
                           <button 
-                            onClick={() => setSelectedMovieForDetails(movie)}
+                            onClick={() => handleShowDetails(movie, `movie-poster-${movie.id}-hero`)}
                             className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95"
                           >
                             <Info size={18} /> More Info
@@ -1710,7 +1720,7 @@ export default function App() {
                               Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                             ) : (
                               currentMovies.map(movie => (
-                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
+                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-search`} />
                               ))
                             )}
                           </div>
@@ -1754,7 +1764,7 @@ export default function App() {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-trending`} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -1775,7 +1785,7 @@ export default function App() {
                             Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                           ) : (
                             currentMovies.map((movie) => (
-                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={setSelectedMovieForDetails} searchQuery={searchQuery} />
+                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} />
                             ))
                           )}
                         </div>
@@ -2020,13 +2030,18 @@ export default function App() {
               key={selectedMovieForDetails.id} 
               movie={selectedMovieForDetails} 
               allMovies={movies}
+              layoutId={activeLayoutId || `movie-poster-${selectedMovieForDetails.id}`}
               onClose={() => {
                 if (window.history.state?.modal === 'movie-details') {
                   window.history.back();
                 }
                 setSelectedMovieForDetails(null);
+                setActiveLayoutId(null);
               }} 
-              onMovieClick={(m) => setSelectedMovieForDetails(m)}
+              onMovieClick={(m) => {
+                setSelectedMovieForDetails(m);
+                setActiveLayoutId(`movie-poster-${m.id}-similar`);
+              }}
               onDownload={handleDownload}
               onView={handleView}
             />
@@ -2082,7 +2097,7 @@ const MovieManagement: React.FC<{
   onDelete: (id: string) => void,
   onDownload: (id: string) => void,
   onView: (id: string) => void,
-  onShowDetails: (m: Movie) => void,
+  onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery: string,
   onBulkUpdate: (ids: string[], updates: Partial<Movie>) => Promise<void>,
   onBulkDelete: (ids: string[]) => Promise<void>
@@ -2250,6 +2265,7 @@ const MovieManagement: React.FC<{
               searchQuery={searchQuery} 
               isSelected={selectedIds.includes(movie.id)}
               onSelect={toggleSelect}
+              layoutId={`movie-poster-${movie.id}-mgmt`}
             />
           ))}
         </div>
@@ -2722,14 +2738,17 @@ const MovieCard: React.FC<{
   onDelete: (id: string) => void, 
   onDownload: (id: string) => void, 
   onView: (id: string) => void, 
-  onShowDetails: (m: Movie) => void,
+  onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery?: string,
   isSelected?: boolean,
-  onSelect?: (id: string) => void
-}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect }) => {
+  onSelect?: (id: string) => void,
+  layoutId?: string
+}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect, layoutId }) => {
   const query = searchQuery.toLowerCase().trim();
   const matchesCast = query && movie.cast?.toLowerCase().includes(query);
   const matchesDirector = query && movie.director?.toLowerCase().includes(query);
+  
+  const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
 
   return (
     <div
@@ -2748,8 +2767,8 @@ const MovieCard: React.FC<{
       )}
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
         <motion.div 
-          layoutId={`movie-poster-${movie.id}`}
-          onClick={() => onShowDetails(movie)}
+          layoutId={finalLayoutId}
+          onClick={() => onShowDetails(movie, finalLayoutId)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
           <MoviePoster src={movie.posterUrl} alt={movie.title} className="group-hover:scale-105 transition-transform duration-500" />
@@ -2870,7 +2889,8 @@ const MovieDetailModal: React.FC<{
   onMovieClick: (m: Movie) => void;
   onDownload: (id: string) => void;
   onView: (id: string) => void;
-}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView }) => {
+  layoutId?: string;
+}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, layoutId }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -2878,6 +2898,8 @@ const MovieDetailModal: React.FC<{
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
+  
+  const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
@@ -3017,7 +3039,7 @@ const MovieDetailModal: React.FC<{
           <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
             {/* Poster Background */}
             <motion.div 
-              layoutId={`movie-poster-${movie.id}`}
+              layoutId={finalLayoutId}
               className="absolute inset-0 overflow-hidden"
             >
               <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
@@ -3163,7 +3185,9 @@ const MovieDetailModal: React.FC<{
                     className="bg-[#242424] rounded-lg overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
                   >
                     <div className="aspect-[16/9] relative overflow-hidden">
-                      <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:scale-110 transition-transform duration-700" />
+                      <motion.div layoutId={`movie-poster-${m.id}-similar`} className="w-full h-full">
+                        <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:scale-110 transition-transform duration-700" />
+                      </motion.div>
                       <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-all" />
                     </div>
                     <div className="p-4 md:p-5 space-y-2 md:space-y-3">
