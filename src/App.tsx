@@ -40,6 +40,8 @@ interface Movie {
   duration?: string;
   quality?: string;
   match_score?: number;
+  auto_play_video?: boolean;
+  auto_play_video_url?: string;
 }
 
 interface AuditLog {
@@ -50,6 +52,40 @@ interface AuditLog {
   admin_email: string;
   timestamp: string;
 }
+
+const getEmbedUrl = (url: string) => {
+  if (!url) return '';
+  
+  // Handle YouTube
+  let videoId = '';
+  if (url.includes('youtube.com/watch?v=')) {
+    videoId = url.split('v=')[1].split('&')[0];
+  } else if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split('?')[0];
+  } else if (url.includes('youtube.com/embed/')) {
+    videoId = url.split('embed/')[1].split('?')[0];
+  }
+
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+
+  // Handle Google Drive
+  if (url.includes('drive.google.com')) {
+    let driveId = '';
+    if (url.includes('/file/d/')) {
+      driveId = url.split('/file/d/')[1].split('/')[0];
+    } else if (url.includes('id=')) {
+      driveId = url.split('id=')[1].split('&')[0];
+    }
+    
+    if (driveId) {
+      return `https://drive.google.com/file/d/${driveId}/preview`;
+    }
+  }
+
+  return url;
+};
 
 const AdminSidebar: React.FC<{
   activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs',
@@ -891,7 +927,7 @@ export default function App() {
   const [showGoToTop, setShowGoToTop] = useState(false);
   const [formData, setFormData] = useState({
     title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
-    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
+    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: ''
   });
 
   useEffect(() => {
@@ -1302,7 +1338,9 @@ export default function App() {
       quality: movie.quality || 'HD',
       match_score: movie.match_score || 98,
       downloads: movie.downloads || 0,
-      views: movie.views || 0
+      views: movie.views || 0,
+      auto_play_video: movie.auto_play_video || false,
+      auto_play_video_url: movie.auto_play_video_url || ''
     });
     setShowAddEditModal(true);
   };
@@ -1977,6 +2015,10 @@ export default function App() {
                         <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Trailer Embed URL (Optional)</label>
                         <input type="url" value={formData.trailerUrl} onChange={(e) => setFormData({...formData, trailerUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. https://www.youtube.com/embed/..." />
                       </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Dedicated Auto-play Video URL (Optional)</label>
+                        <input type="url" value={formData.auto_play_video_url} onChange={(e) => setFormData({...formData, auto_play_video_url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="YouTube or Google Drive link..." />
+                      </div>
                     </div>
                   </div>
 
@@ -2056,6 +2098,16 @@ export default function App() {
                         <div>
                           <p className="text-sm font-bold text-current">Show in Trending Section</p>
                           <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on trending row</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all" onClick={() => setFormData({...formData, auto_play_video: !formData.auto_play_video})}>
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.auto_play_video ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
+                          {formData.auto_play_video && <Plus size={16} className="text-white rotate-45" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-current">Auto-play Video</p>
+                          <p className="text-[10px] text-white/40 uppercase tracking-wider">Auto-play trailer in details modal</p>
                         </div>
                       </div>
                     </div>
@@ -2968,8 +3020,19 @@ const MovieDetailModal: React.FC<{
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   
   const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
+
+  useEffect(() => {
+    setShowVideo(false);
+    if (movie.auto_play_video && (movie.auto_play_video_url || movie.trailerUrl)) {
+      const timer = setTimeout(() => {
+        setShowVideo(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [movie.id, movie.auto_play_video, movie.auto_play_video_url, movie.trailerUrl]);
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
@@ -3123,7 +3186,16 @@ const MovieDetailModal: React.FC<{
                 transition={sharedTransition}
                 className="absolute inset-0 overflow-hidden"
               >
-                <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
+                {showVideo && (movie.auto_play_video_url || movie.trailerUrl) ? (
+                  <iframe
+                    src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1`}
+                    className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                  />
+                ) : (
+                  <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
                 {/* Shimmer Effect during transition */}
                 <motion.div 
