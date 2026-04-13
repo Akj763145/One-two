@@ -3304,6 +3304,36 @@ const MovieDetailModal: React.FC<{
                   mozallowfullscreen="true"
                 ></iframe>
               </div>
+              <a 
+                href={(() => {
+                  const url = movie.trailerUrl;
+                  if (!url) return '#';
+                  // Auto-convert Google Drive links
+                  if (url.includes('drive.google.com/file/d/')) {
+                    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) {
+                      return `https://drive.google.com/file/d/${match[1]}/view`;
+                    }
+                  }
+                  // Auto-convert YouTube links
+                  if (url.includes('youtube.com/watch?v=')) {
+                    try {
+                      const videoId = new URL(url).searchParams.get('v');
+                      if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
+                    } catch (e) {}
+                  }
+                  if (url.includes('youtu.be/')) {
+                    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                    if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
+                  }
+                  return url;
+                })()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold text-sm transition-all"
+              >
+                <Play size={16} /> Open in Fullscreen
+              </a>
             </div>
           )}
 
