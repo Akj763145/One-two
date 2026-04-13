@@ -24,6 +24,7 @@ interface Movie {
   title: string;
   url: string;
   viewUrl?: string;
+  trailerUrl?: string;
   posterUrl: string;
   description: string;
   category?: string;
@@ -121,8 +122,9 @@ const Dashboard: React.FC<{
   onView: (id: string) => void,
   onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery: string,
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab }) => {
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
+  loadingActions?: Record<string, boolean>
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab, loadingActions = {} }) => {
   const stats = useMemo(() => {
     const totalMovies = movies.length;
     const totalViews = movies.reduce((sum, m) => sum + (m.views || 0), 0);
@@ -850,6 +852,7 @@ export default function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
@@ -887,7 +890,7 @@ export default function App() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
   const [formData, setFormData] = useState({
-    title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
+    title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
     release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0
   });
 
@@ -1278,7 +1281,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
+    setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
     setEditingMovie(null);
     setIsActionLoading(false);
   };
@@ -1286,7 +1289,7 @@ export default function App() {
   const handleEdit = (movie: Movie) => {
     setEditingMovie(movie);
     setFormData({
-      title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '',
+      title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '', trailerUrl: movie.trailerUrl || '',
       posterUrl: movie.posterUrl, description: movie.description,
       category: movie.category || 'Other',
       is_hero: movie.is_hero || false,
@@ -1362,6 +1365,7 @@ export default function App() {
     const movie = movies.find(m => m.id === movieId);
     if (!movie) return;
 
+    setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: true }));
     const newDownloads = (movie.downloads || 0) + 1;
     setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
     toast.success(`Starting download for ${movie.title}`);
@@ -1372,7 +1376,11 @@ export default function App() {
         if (error) console.error('Error updating downloads:', error.message);
       } catch (err) {
         console.error('Failed to update downloads:', err);
+      } finally {
+        setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: false }));
       }
+    } else {
+      setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: false }));
     }
   };
 
@@ -1380,6 +1388,7 @@ export default function App() {
     const movie = movies.find(m => m.id === movieId);
     if (!movie) return;
 
+    setLoadingActions(prev => ({ ...prev, [`view-${movieId}`]: true }));
     const newViews = (movie.views || 0) + 1;
     setMovies(prev => prev.map(m => m.id === movieId ? { ...m, views: newViews } : m));
 
@@ -1389,7 +1398,11 @@ export default function App() {
         if (error) console.error('Error updating views:', error.message);
       } catch (err) {
         console.error('Failed to update views:', err);
+      } finally {
+        setLoadingActions(prev => ({ ...prev, [`view-${movieId}`]: false }));
       }
+    } else {
+      setLoadingActions(prev => ({ ...prev, [`view-${movieId}`]: false }));
     }
   };
 
@@ -1463,7 +1476,7 @@ export default function App() {
           onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+          onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
           isSearchActive={isSearchActive}
           setIsSearchActive={(active) => {
             if (!active && window.history.state?.modal === 'search') {
@@ -1483,14 +1496,14 @@ export default function App() {
           <AdminSidebar 
             activeTab={adminView} 
             setActiveTab={setAdminView} 
-            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
 
           <AdminMobileNav
             activeTab={adminView}
             setActiveTab={setAdminView}
-            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
           
@@ -1519,6 +1532,7 @@ export default function App() {
                         onShowDetails={handleShowDetails} 
                         searchQuery={searchQuery} 
                         setActiveTab={setAdminView}
+                        loadingActions={loadingActions}
                       />
                     )}
                     {adminView === 'movies' && (
@@ -1532,6 +1546,7 @@ export default function App() {
                         searchQuery={searchQuery} 
                         onBulkUpdate={handleBulkUpdate}
                         onBulkDelete={handleBulkDelete}
+                        loadingActions={loadingActions}
                       />
                     )}
                     {adminView === 'feedback' && (
@@ -1737,7 +1752,7 @@ export default function App() {
                               Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                             ) : (
                               currentMovies.map(movie => (
-                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-search`} />
+                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-search`} loadingActions={loadingActions} />
                               ))
                             )}
                           </div>
@@ -1781,7 +1796,7 @@ export default function App() {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-trending`} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-trending`} loadingActions={loadingActions} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -1802,7 +1817,7 @@ export default function App() {
                             Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                           ) : (
                             currentMovies.map((movie) => (
-                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} />
+                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} loadingActions={loadingActions} />
                             ))
                           )}
                         </div>
@@ -1945,6 +1960,10 @@ export default function App() {
                         <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Watch URL (Optional)</label>
                         <input type="url" value={formData.viewUrl} onChange={(e) => setFormData({...formData, viewUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
                       </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Trailer Embed URL (Optional)</label>
+                        <input type="url" value={formData.trailerUrl} onChange={(e) => setFormData({...formData, trailerUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="e.g. https://www.youtube.com/embed/..." />
+                      </div>
                     </div>
                   </div>
 
@@ -2061,6 +2080,7 @@ export default function App() {
               }}
               onDownload={handleDownload}
               onView={handleView}
+              loadingActions={loadingActions}
             />
           )}
         </AnimatePresence>
@@ -2117,8 +2137,9 @@ const MovieManagement: React.FC<{
   onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery: string,
   onBulkUpdate: (ids: string[], updates: Partial<Movie>) => Promise<void>,
-  onBulkDelete: (ids: string[]) => Promise<void>
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onBulkUpdate, onBulkDelete }) => {
+  onBulkDelete: (ids: string[]) => Promise<void>,
+  loadingActions?: Record<string, boolean>
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onBulkUpdate, onBulkDelete, loadingActions = {} }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -2283,6 +2304,7 @@ const MovieManagement: React.FC<{
               isSelected={selectedIds.includes(movie.id)}
               onSelect={toggleSelect}
               layoutId={`movie-poster-${movie.id}-mgmt`}
+              loadingActions={loadingActions}
             />
           ))}
         </div>
@@ -2766,8 +2788,9 @@ const MovieCard: React.FC<{
   searchQuery?: string,
   isSelected?: boolean,
   onSelect?: (id: string) => void,
-  layoutId?: string
-}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect, layoutId }) => {
+  layoutId?: string,
+  loadingActions?: Record<string, boolean>
+}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect, layoutId, loadingActions = {} }) => {
   const query = searchQuery.toLowerCase().trim();
   const matchesCast = query && movie.cast?.toLowerCase().includes(query);
   const matchesDirector = query && movie.director?.toLowerCase().includes(query);
@@ -2857,9 +2880,9 @@ const MovieCard: React.FC<{
                 target="_blank" 
                 rel="noopener noreferrer" 
                 onClick={() => onView(movie.id)}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-700 text-white py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:from-emerald-400 hover:to-green-600 transition-all active:scale-95"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-700 text-white py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:from-emerald-400 hover:to-green-600 transition-all active:scale-95 disabled:opacity-50"
               >
-                <Play size={14} className="fill-current" /> Watch
+                {loadingActions[`view-${movie.id}`] ? <Spinner size={14} /> : <Play size={14} className="fill-current" />} Watch
               </a>
             )}
             <a 
@@ -2867,9 +2890,9 @@ const MovieCard: React.FC<{
               target="_blank" 
               rel="noopener noreferrer" 
               onClick={() => onDownload(movie.id)}
-              className="flex-1 bg-white/10 border border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white/20 transition-all active:scale-95"
+              className="flex-1 bg-white/10 border border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              <Download size={14} /> Download
+              {loadingActions[`download-${movie.id}`] ? <Spinner size={14} /> : <Download size={14} />} Download
             </a>
           </div>
           
@@ -2915,7 +2938,8 @@ const MovieDetailModal: React.FC<{
   onDownload: (id: string) => void;
   onView: (id: string) => void;
   layoutId?: string;
-}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, layoutId }) => {
+  loadingActions?: Record<string, boolean>;
+}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, layoutId, loadingActions = {} }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -3115,9 +3139,9 @@ const MovieDetailModal: React.FC<{
                     target="_blank" 
                     rel="noopener noreferrer" 
                     onClick={() => onView(movie.id)}
-                    className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg"
+                    className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg disabled:opacity-50"
                   >
-                    <Play size={20} className="fill-current md:w-6 md:h-6" /> Play
+                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} Play
                   </a>
                 )}
                 <a 
@@ -3125,9 +3149,9 @@ const MovieDetailModal: React.FC<{
                   target="_blank" 
                   rel="noopener noreferrer" 
                   onClick={() => onDownload(movie.id)}
-                  className="bg-white/10 hover:bg-white/20 text-white px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg backdrop-blur-xl border border-white/10 active:scale-95"
+                  className="bg-white/10 hover:bg-white/20 text-white px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg backdrop-blur-xl border border-white/10 active:scale-95 disabled:opacity-50"
                 >
-                  <Download size={20} className="md:w-6 md:h-6" /> Download
+                  {loadingActions[`download-${movie.id}`] ? <Spinner size={20} /> : <Download size={20} className="md:w-6 md:h-6" />} Download
                 </a>
                 
                 {/* Social Sharing */}
@@ -3216,6 +3240,44 @@ const MovieDetailModal: React.FC<{
               </div>
             </div>
           </div>
+
+          {/* Trailer Section */}
+          {movie.trailerUrl && (
+            <div className="space-y-6">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight">Trailer</h3>
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+                <iframe 
+                  src={(() => {
+                    const url = movie.trailerUrl;
+                    if (!url) return '';
+                    // Auto-convert Google Drive links
+                    if (url.includes('drive.google.com/file/d/')) {
+                      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                      if (match && match[1]) {
+                        return `https://drive.google.com/file/d/${match[1]}/preview`;
+                      }
+                    }
+                    // Auto-convert YouTube links
+                    if (url.includes('youtube.com/watch?v=')) {
+                      try {
+                        const videoId = new URL(url).searchParams.get('v');
+                        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+                      } catch (e) {}
+                    }
+                    if (url.includes('youtu.be/')) {
+                      const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+                    }
+                    return url;
+                  })()} 
+                  title={`${movie.title} Trailer`}
+                  className="absolute top-0 left-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          )}
 
           {/* More Like This Section */}
           {similarMovies.length > 0 && (
