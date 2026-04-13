@@ -3167,7 +3167,7 @@ const MovieDetailModal: React.FC<{
                     }}
                     className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg disabled:opacity-50"
                   >
-                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} {movie.trailerUrl ? 'Trailer' : 'Watch'}
+                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} {movie.trailerUrl ? 'Watch Now' : 'Watch'}
                   </button>
                 )}
                 <a 
