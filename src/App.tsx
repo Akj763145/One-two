@@ -310,7 +310,11 @@ const Dashboard: React.FC<{
                 onClick={() => onShowDetails(movie, `movie-poster-${movie.id}-dash`)}
                 className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
               >
-                <motion.div layoutId={`movie-poster-${movie.id}-dash`} className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+                <motion.div 
+                  layoutId={`movie-poster-${movie.id}-dash`} 
+                  transition={sharedTransition}
+                  className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0"
+                >
                   <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </motion.div>
                 <div className="flex-1 min-w-0">
@@ -1641,7 +1645,8 @@ export default function App() {
                   {featuredMovies.map((movie, index) => (
                     <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
                       <motion.div 
-                        layoutId={`movie-poster-${movie.id}`}
+                        layoutId={`movie-poster-${movie.id}-hero`}
+                        transition={sharedTransition}
                         className="absolute inset-0"
                       >
                         <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img h-full w-full object-cover" priority={index === 0} />
@@ -2742,6 +2747,13 @@ const MovieSkeleton: React.FC = () => (
   </div>
 );
 
+const sharedTransition = {
+  type: "spring",
+  stiffness: 260,
+  damping: 28,
+  mass: 1
+};
+
 const MovieCard: React.FC<{ 
   movie: Movie, 
   isAdmin: boolean, 
@@ -2779,6 +2791,7 @@ const MovieCard: React.FC<{
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
         <motion.div 
           layoutId={finalLayoutId}
+          transition={sharedTransition}
           onClick={() => onShowDetails(movie, finalLayoutId)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
@@ -3051,10 +3064,19 @@ const MovieDetailModal: React.FC<{
             {/* Poster Background */}
             <motion.div 
               layoutId={finalLayoutId}
+              transition={sharedTransition}
               className="absolute inset-0 overflow-hidden"
             >
               <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              {/* Shimmer Effect during transition */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.3, 0] }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_2s_infinite]"
+                style={{ pointerEvents: 'none' }}
+              />
             </motion.div>
             
             {/* Content Overlay */}
@@ -3196,7 +3218,11 @@ const MovieDetailModal: React.FC<{
                     className="bg-[#242424] rounded-lg overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
                   >
                     <div className="aspect-[16/9] relative overflow-hidden">
-                      <motion.div layoutId={`movie-poster-${m.id}-similar`} className="w-full h-full">
+                      <motion.div 
+                        layoutId={`movie-poster-${m.id}-similar`} 
+                        transition={sharedTransition}
+                        className="w-full h-full"
+                      >
                         <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:scale-110 transition-transform duration-700" />
                       </motion.div>
                       <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-all" />
