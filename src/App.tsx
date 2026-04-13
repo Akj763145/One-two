@@ -3049,7 +3049,7 @@ const MovieDetailModal: React.FC<{
     if (movie.auto_play_video && (movie.auto_play_video_url || movie.trailerUrl)) {
       const timer = setTimeout(() => {
         setShowVideo(true);
-      }, 2500);
+      }, 1700);
       return () => clearTimeout(timer);
     }
   }, [movie.id, movie.auto_play_video, movie.auto_play_video_url, movie.trailerUrl]);
