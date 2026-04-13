@@ -1682,10 +1682,23 @@ export default function App() {
                           </span>
                         )}
                         <div className="flex items-center gap-4">
-                          {movie.viewUrl && (
-                            <a href={movie.viewUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleView(movie.id)} className="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-bold text-sm hover:bg-red-600 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-xl">
+                          {(movie.trailerUrl || movie.viewUrl) && (
+                            <button 
+                              onClick={() => {
+                                if (movie.trailerUrl) {
+                                  handleShowDetails(movie, `movie-poster-${movie.id}-hero`);
+                                  setTimeout(() => {
+                                    document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
+                                  }, 100);
+                                } else if (movie.viewUrl) {
+                                  window.open(movie.viewUrl, '_blank');
+                                  handleView(movie.id);
+                                }
+                              }}
+                              className="flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-bold text-sm hover:bg-red-600 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-xl"
+                            >
                               <Play size={18} className="fill-current" /> Watch Now
-                            </a>
+                            </button>
                           )}
                           <button 
                             onClick={() => handleShowDetails(movie, `movie-poster-${movie.id}-hero`)}
@@ -2874,16 +2887,24 @@ const MovieCard: React.FC<{
         
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            {movie.viewUrl && (
-              <a 
-                href={movie.viewUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                onClick={() => onView(movie.id)}
+            {(movie.trailerUrl || movie.viewUrl) && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (movie.trailerUrl) {
+                    onShowDetails(movie, finalLayoutId);
+                    setTimeout(() => {
+                      document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  } else if (movie.viewUrl) {
+                    window.open(movie.viewUrl, '_blank');
+                    onView(movie.id);
+                  }
+                }}
                 className="flex-1 bg-gradient-to-r from-emerald-500 to-green-700 text-white py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:from-emerald-400 hover:to-green-600 transition-all active:scale-95 disabled:opacity-50"
               >
                 {loadingActions[`view-${movie.id}`] ? <Spinner size={14} /> : <Play size={14} className="fill-current" />} Watch
-              </a>
+              </button>
             )}
             <a 
               href={movie.url} 
@@ -3133,16 +3154,21 @@ const MovieDetailModal: React.FC<{
                 }}
                 className="flex flex-wrap items-center gap-4"
               >
-                {movie.viewUrl && (
-                  <a 
-                    href={movie.viewUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    onClick={() => onView(movie.id)}
+                {(movie.trailerUrl || movie.viewUrl) && (
+                  <button 
+                    onClick={(e) => {
+                      if (movie.trailerUrl) {
+                        e.preventDefault();
+                        document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
+                      } else if (movie.viewUrl) {
+                        window.open(movie.viewUrl, '_blank');
+                        onView(movie.id);
+                      }
+                    }}
                     className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg disabled:opacity-50"
                   >
-                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} Play
-                  </a>
+                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} {movie.trailerUrl ? 'Trailer' : 'Watch'}
+                  </button>
                 )}
                 <a 
                   href={movie.url} 
@@ -3243,8 +3269,8 @@ const MovieDetailModal: React.FC<{
 
           {/* Trailer Section */}
           {movie.trailerUrl && (
-            <div className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight">Trailer</h3>
+            <div id="trailer-section" className="space-y-6 pt-4">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight">Watch Now</h3>
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black/50 border border-white/10">
                 <iframe 
                   src={(() => {
@@ -3272,8 +3298,10 @@ const MovieDetailModal: React.FC<{
                   })()} 
                   title={`${movie.title} Trailer`}
                   className="absolute top-0 left-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                   allowFullScreen
+                  webkitallowfullscreen="true"
+                  mozallowfullscreen="true"
                 ></iframe>
               </div>
             </div>
