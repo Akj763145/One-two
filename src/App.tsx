@@ -1415,7 +1415,7 @@ export default function App() {
   const trendingMovies = movies.filter(m => m.is_trending);
 
   return (
-    <div className={`min-h-screen bg-black text-white font-sans selection:bg-red-500/30 transition-colors duration-500 overflow-x-hidden dark`}>
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-red-500/30 overflow-x-hidden dark">
       <Toaster 
         position="top-center" 
         expand={true}
@@ -1448,6 +1448,7 @@ export default function App() {
           className: "fluid-mesh-toast",
         }}
       />
+      
       <AnimatePresence>
         {showWelcome && (
           <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
@@ -1841,8 +1842,8 @@ export default function App() {
     </>
   )}
 
-      {/* Modals */}
-      <AnimatePresence>
+{/* Modals */}
+<AnimatePresence>
         {showDMCA && (
           <DMCAModal key="dmca-modal" onClose={() => setShowDMCA(false)} />
         )}
@@ -2750,7 +2751,7 @@ const MovieSkeleton: React.FC = () => (
 const sharedTransition = {
   type: "spring",
   stiffness: 260,
-  damping: 28,
+  damping: 32,
   mass: 1
 };
 
@@ -3030,54 +3031,64 @@ const MovieDetailModal: React.FC<{
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }} 
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        transition={{ duration: 0.4 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
       
       {/* Scrollable Container */}
       <div 
         id="movie-detail-modal-container"
-        className="fixed inset-0 overflow-y-auto pt-4 md:pt-12 pb-12 px-0 md:px-4 custom-scrollbar overscroll-contain scroll-pt-8 md:scroll-pt-12"
+        className="fixed inset-0 overflow-y-auto pt-0 md:pt-12 pb-12 px-0 md:px-4 custom-scrollbar overscroll-contain"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         <div className="flex justify-center min-h-full items-start">
           <motion.div 
+            transition={sharedTransition}
             initial="hidden"
             animate="visible"
             exit="hidden"
             variants={{
-              hidden: { opacity: 0 },
+              hidden: { opacity: 0, y: 20 },
               visible: {
                 opacity: 1,
+                y: 0,
                 transition: {
-                  duration: 0.3,
+                  duration: 0.4,
                   staggerChildren: 0.05,
                   delayChildren: 0.1
                 }
               }
             }}
-            className="w-full max-w-4xl bg-black rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
+            className="w-full max-w-4xl bg-[#0a0a0a] rounded-none md:rounded-[40px] shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
           >
-          {/* Hero Section */}
-          <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
-            {/* Poster Background */}
-            <motion.div 
-              layoutId={finalLayoutId}
-              transition={sharedTransition}
-              className="absolute inset-0 overflow-hidden"
+            {/* Close Button - App Store Style */}
+            <button 
+              onClick={onClose}
+              className="absolute top-6 right-6 z-[60] w-10 h-10 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-black/80 transition-all active:scale-90"
             >
-              <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-              {/* Shimmer Effect during transition */}
+              <X size={20} />
+            </button>
+
+            {/* Hero Section */}
+            <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
+              {/* Poster Background */}
               <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.3, 0] }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_2s_infinite]"
-                style={{ pointerEvents: 'none' }}
-              />
-            </motion.div>
+                layoutId={finalLayoutId}
+                transition={sharedTransition}
+                className="absolute inset-0 overflow-hidden"
+              >
+                <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
+                {/* Shimmer Effect during transition */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.3, 0] }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_2s_infinite]"
+                  style={{ pointerEvents: 'none' }}
+                />
+              </motion.div>
             
             {/* Content Overlay */}
             <div className="relative z-10 p-8 md:p-14 w-full">
