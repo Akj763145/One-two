@@ -67,7 +67,7 @@ const getEmbedUrl = (url: string) => {
   }
 
   if (videoId) {
-    return `https://www.youtube.com/embed/${videoId}`;
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
   }
 
   // Handle Google Drive
@@ -3023,6 +3023,26 @@ const MovieDetailModal: React.FC<{
   const [showVideo, setShowVideo] = useState(false);
   
   const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Check if message is from YouTube
+      if (event.origin.includes('youtube.com')) {
+        try {
+          const data = JSON.parse(event.data);
+          // YouTube state 0 means "ended"
+          if (data.event === 'infoDelivery' && data.info && data.info.playerState === 0) {
+            setShowVideo(false);
+          }
+        } catch (e) {
+          // Not a JSON message or not from YouTube API
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     setShowVideo(false);
