@@ -3023,6 +3023,8 @@ const MovieDetailModal: React.FC<{
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
+  const [isTrailerLoading, setIsTrailerLoading] = useState(true);
+  const [isHeroVideoLoading, setIsHeroVideoLoading] = useState(true);
   
   const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
 
@@ -3048,6 +3050,8 @@ const MovieDetailModal: React.FC<{
 
   useEffect(() => {
     setShowVideo(false);
+    setIsTrailerLoading(true);
+    setIsHeroVideoLoading(true);
     if (movie.auto_play_video && (movie.auto_play_video_url || movie.trailerUrl)) {
       const timer = setTimeout(() => {
         setShowVideo(true);
@@ -3209,12 +3213,20 @@ const MovieDetailModal: React.FC<{
                 className="absolute inset-0 overflow-hidden"
               >
                 {showVideo && (movie.auto_play_video_url || movie.trailerUrl) ? (
-                  <iframe
-                    src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1`}
-                    className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70"
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
+                  <div className="relative w-full h-full">
+                    {isHeroVideoLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 backdrop-blur-sm">
+                        <Spinner size={30} className="text-white/50" />
+                      </div>
+                    )}
+                    <iframe
+                      src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1`}
+                      className={`h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-all duration-[8000ms] ${isHeroVideoLoading ? 'opacity-0' : 'opacity-70'}`}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      onLoad={() => setIsHeroVideoLoading(false)}
+                    />
+                  </div>
                 ) : (
                   <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
                 )}
@@ -3367,6 +3379,14 @@ const MovieDetailModal: React.FC<{
             <div id="trailer-section" className="space-y-6 pt-4">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight">Watch Now</h3>
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+                {isTrailerLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0a0a0a]">
+                    <div className="flex flex-col items-center gap-4">
+                      <Spinner size={40} className="text-emerald-500" />
+                      <span className="text-white/40 text-sm font-medium animate-pulse">Preparing your experience...</span>
+                    </div>
+                  </div>
+                )}
                 <iframe 
                   src={(() => {
                     const url = movie.trailerUrl;
@@ -3397,6 +3417,7 @@ const MovieDetailModal: React.FC<{
                   allowFullScreen
                   webkitallowfullscreen="true"
                   mozallowfullscreen="true"
+                  onLoad={() => setIsTrailerLoading(false)}
                 ></iframe>
               </div>
               <a 
