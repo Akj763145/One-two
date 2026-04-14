@@ -1725,6 +1725,7 @@ export default function App() {
                               onClick={() => {
                                 if (movie.trailerUrl) {
                                   handleShowDetails(movie, `movie-poster-${movie.id}-hero`);
+                                  handleView(movie.id);
                                   setTimeout(() => {
                                     document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
                                   }, 100);
@@ -2945,6 +2946,7 @@ const MovieCard: React.FC<{
                   e.stopPropagation();
                   if (movie.trailerUrl) {
                     onShowDetails(movie, finalLayoutId);
+                    onView(movie.id);
                     setTimeout(() => {
                       document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
                     }, 100);
@@ -3251,6 +3253,7 @@ const MovieDetailModal: React.FC<{
                     onClick={(e) => {
                       if (movie.trailerUrl) {
                         e.preventDefault();
+                        onView(movie.id);
                         document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
                       } else if (movie.viewUrl) {
                         window.open(movie.viewUrl, '_blank');
