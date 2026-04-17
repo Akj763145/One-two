@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Plyr } from "plyr-react";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -42,6 +43,7 @@ interface Movie {
   match_score?: number;
   auto_play_video?: boolean;
   auto_play_video_url?: string;
+  player_type?: 'iframe' | 'plyr';
 }
 
 interface AuditLog {
@@ -85,6 +87,86 @@ const getEmbedUrl = (url: string) => {
   }
 
   return url;
+};
+
+const getYouTubeId = (url: string) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  const id = (match && match[2].length === 11) ? match[2] : null;
+  if (id) return id;
+  
+  // Try backup regex
+  const backupMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+  return backupMatch ? backupMatch[1] : null;
+};
+
+const VideoPlayer: React.FC<{ 
+  url: string, 
+  playerType?: 'iframe' | 'plyr', 
+  className?: string,
+  autoPlay?: boolean,
+  onLoad?: () => void 
+}> = ({ url, playerType = 'iframe', className = "", autoPlay = false, onLoad }) => {
+  const youtubeId = getYouTubeId(url);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Ensure onLoad is called even if Plyr is flaky
+  useEffect(() => {
+    if (playerType === 'plyr' && youtubeId) {
+      const timer = setTimeout(() => {
+        if (onLoad) onLoad();
+      }, 2000); // 2 second timeout as fallback
+      return () => clearTimeout(timer);
+    }
+  }, [playerType, youtubeId, onLoad]);
+
+  if (playerType === 'plyr' && youtubeId) {
+    return (
+      <div className={`${className} bg-black`} ref={containerRef}>
+        <Plyr
+          source={{
+            type: 'video',
+            sources: [
+              {
+                src: youtubeId,
+                provider: 'youtube',
+              },
+            ],
+          }}
+          options={{
+            autoplay: autoPlay,
+            muted: autoPlay,
+            hideControls: autoPlay,
+            clickToPlay: !autoPlay,
+            playsinline: true,
+            loop: { active: autoPlay },
+            fullscreen: { enabled: !autoPlay, fallback: true, iosNative: true },
+            youtube: {
+              noCookie: true,
+              rel: 0,
+              showinfo: 0,
+              iv_load_policy: 3,
+              modestbranding: 1
+            }
+          }}
+          onReady={onLoad}
+          onEnterFullscreen={() => console.log('Fullscreen')}
+        />
+      </div>
+    );
+  }
+
+  // Fallback to Iframe
+  return (
+    <iframe
+      src={`${getEmbedUrl(url)}${getEmbedUrl(url).includes('?') ? '&' : '?'}autoplay=${autoPlay ? 1 : 0}&mute=${autoPlay ? 1 : 0}`}
+      className={className}
+      allow="autoplay; encrypted-media"
+      allowFullScreen
+      onLoad={onLoad}
+    />
+  );
 };
 
 const AdminSidebar: React.FC<{
@@ -359,7 +441,23 @@ const Dashboard: React.FC<{
                   <h5 className="text-sm font-bold truncate">{movie.title}</h5>
                   <p className="text-[10px] text-white/40 uppercase tracking-wider">{movie.category} • {movie.release_year || 'N/A'}</p>
                 </div>
-                <div className="flex items-center gap-4 px-4 border-l border-white/10">
+                <div className="flex items-center gap-2 px-4 border-l border-white/10">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onEdit(movie); }}
+                    className="p-2 bg-blue-500/10 text-white/40 hover:text-blue-400 transition-all rounded-lg"
+                    title="Edit Movie"
+                  >
+                    <Edit size={14} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(movie.id); }}
+                    className="p-2 bg-red-500/10 text-white/40 hover:text-red-500 transition-all rounded-lg"
+                    title="Delete Movie"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-4 px-4 border-l border-white/10 hidden md:flex">
                   <div className="text-center">
                     <p className="text-xs font-black">{movie.views || 0}</p>
                     <p className="text-[8px] text-white/30 uppercase">Views</p>
@@ -450,7 +548,8 @@ const INITIAL_MOVIES: Movie[] = [
     description: 'Download now',
     category: 'Action',
     downloads: 0,
-    views: 0
+    views: 0,
+    player_type: 'plyr'
   }
 ];
 
@@ -925,10 +1024,13 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
-  const [formData, setFormData] = useState({
+  const INITIAL_FORM_DATA = {
     title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
-    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: ''
-  });
+    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: '',
+    player_type: 'iframe' as 'iframe' | 'plyr'
+  };
+
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
   useEffect(() => {
     // Load SEO settings from Supabase or localStorage
@@ -1244,15 +1346,35 @@ export default function App() {
       setIsLoading(false);
       return;
     }
+
     setIsLoading(true);
-    const { data, error } = await supabase.from('movies').select('*').order('created_at', { ascending: false });
-    if (error) {
-      console.error('Error fetching movies:', error.message);
-      setErrorMsg('Failed to load movies. Please try again.');
-    } else if (data) {
-      setMovies(data);
+    try {
+      const { data, error } = await supabase.from('movies').select('*').order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching movies:', error.message);
+        // Handle specific network errors or misconfigurations
+        if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
+          const savedMovies = localStorage.getItem('movieWallah_movies');
+          setMovies(savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES);
+          toast.error("Network error: Using local backup data.");
+        } else {
+          setErrorMsg('Failed to load movies. Please check your Supabase configuration.');
+          toast.error("Database error. Please check your settings.");
+        }
+      } else if (data) {
+        setMovies(data);
+        setErrorMsg(null);
+      }
+    } catch (err: any) {
+      console.error('Unexpected error fetching movies:', err);
+      // Fallback for absolute network failure
+      const savedMovies = localStorage.getItem('movieWallah_movies');
+      setMovies(savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES);
+      toast.error("Connection failed. Running in offline mode.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleShowDetails = (movie: Movie, layoutId: string) => {
@@ -1317,7 +1439,7 @@ export default function App() {
     }
     
     setShowAddEditModal(false);
-    setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 });
+    setFormData(INITIAL_FORM_DATA);
     setEditingMovie(null);
     setIsActionLoading(false);
   };
@@ -1340,7 +1462,8 @@ export default function App() {
       downloads: movie.downloads || 0,
       views: movie.views || 0,
       auto_play_video: movie.auto_play_video || false,
-      auto_play_video_url: movie.auto_play_video_url || ''
+      auto_play_video_url: movie.auto_play_video_url || '',
+      player_type: movie.player_type || 'iframe'
     });
     setShowAddEditModal(true);
   };
@@ -1514,7 +1637,7 @@ export default function App() {
           onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+          onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
           isSearchActive={isSearchActive}
           setIsSearchActive={(active) => {
             if (!active && window.history.state?.modal === 'search') {
@@ -1534,14 +1657,14 @@ export default function App() {
           <AdminSidebar 
             activeTab={adminView} 
             setActiveTab={setAdminView} 
-            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
 
           <AdminMobileNav
             activeTab={adminView}
             setActiveTab={setAdminView}
-            onAddClick={() => { setEditingMovie(null); setFormData({ title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '', release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0 }); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
           
@@ -2019,6 +2142,26 @@ export default function App() {
                       <div className="md:col-span-2">
                         <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Dedicated Auto-play Video URL (Optional)</label>
                         <input type="url" value={formData.auto_play_video_url} onChange={(e) => setFormData({...formData, auto_play_video_url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="YouTube or Google Drive link..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Player Style *</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({...formData, player_type: 'iframe'})}
+                            className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all ${formData.player_type === 'iframe' ? 'bg-white text-black border-white' : 'bg-black/40 text-white/40 border-white/5 hover:border-white/20'}`}
+                          >
+                            Standard Iframe (Faster)
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({...formData, player_type: 'plyr'})}
+                            className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all ${formData.player_type === 'plyr' ? 'bg-white text-black border-white' : 'bg-black/40 text-white/40 border-white/5 hover:border-white/20'}`}
+                          >
+                            Minimal Plyr (Netflix Look)
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[10px] text-white/30 italic">Note: Plyr works best with YouTube. Drive files will fallback to Iframe if they are over 100MB.</p>
                       </div>
                     </div>
                   </div>
@@ -2900,6 +3043,23 @@ const MovieCard: React.FC<{
           </div>
         </motion.div>
       </div>
+
+      {isAdmin && (
+        <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5 transition-opacity">
+          <button
+            onClick={() => onEdit(movie)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            <Edit size={12} /> Edit
+          </button>
+          <button
+            onClick={() => onDelete(movie.id)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            <Trash2 size={12} /> Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 });
@@ -3121,11 +3281,11 @@ const MovieDetailModal: React.FC<{
                 {/* Overlaid Video (Fades in when loaded) */}
                 {showVideo && (movie.auto_play_video_url || movie.trailerUrl) && (
                   <div className="absolute inset-0 w-full h-full">
-                    <iframe
-                      src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1&loop=1&playlist=${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').split('/').pop()?.split('?')[0]}`}
+                    <VideoPlayer
+                      url={movie.auto_play_video_url || movie.trailerUrl || ''}
+                      playerType={movie.player_type}
+                      autoPlay={true}
                       className={`h-full w-full transition-opacity duration-1000 ${isHeroVideoLoading ? 'opacity-0' : 'opacity-100'}`}
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
                       onLoad={() => setIsHeroVideoLoading(false)}
                     />
                   </div>
@@ -3264,44 +3424,12 @@ const MovieDetailModal: React.FC<{
                     <Spinner size={32} className="text-white/30" />
                   </div>
                 )}
-                <iframe 
-                  src={(() => {
-                    const url = movie.trailerUrl;
-                    if (!url) return '';
-                    let finalUrl = '';
-                    // Auto-convert Google Drive links
-                    if (url.includes('drive.google.com/file/d/')) {
-                      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                      if (match && match[1]) {
-                        finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
-                      }
-                    }
-                    // Auto-convert YouTube links
-                    else if (url.includes('youtube.com/watch?v=')) {
-                      try {
-                        const videoId = new URL(url).searchParams.get('v');
-                        if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
-                      } catch (e) {}
-                    }
-                    else if (url.includes('youtu.be/')) {
-                      const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                      if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
-                    }
-                    else {
-                      finalUrl = url;
-                    }
-                    
-                    if (finalUrl) {
-                      return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}modestbranding=1&rel=0&iv_load_policy=3`;
-                    }
-                    return finalUrl;
-                  })()} 
-                  title={`${movie.title} Trailer`}
+                <VideoPlayer 
+                  url={movie.trailerUrl || ''}
+                  playerType={movie.player_type}
                   className={`absolute top-0 left-0 w-full h-full transition-opacity duration-1000 ${isTrailerLoading ? 'opacity-0' : 'opacity-100'}`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                  allowFullScreen
                   onLoad={() => setIsTrailerLoading(false)}
-                ></iframe>
+                />
               </div>
               <a 
                 href={movie.trailerUrl}

@@ -12,6 +12,9 @@ const isValidUrl = (url: string) => {
   }
 };
 
-export const supabase = supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl) && supabaseUrl !== 'YOUR_SUPABASE_URL'
+export const supabase = supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl) && 
+  supabaseUrl !== 'YOUR_SUPABASE_URL' && 
+  supabaseAnonKey !== 'YOUR_SUPABASE_ANON_KEY' &&
+  !supabaseUrl.includes('YOUR_SUPABASE_URL')
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
