@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -3092,120 +3092,117 @@ const MovieDetailModal: React.FC<{
                 }
               }
             }}
-            className="w-full max-w-4xl bg-[#0a0a0a] rounded-none md:rounded-[40px] shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
+            className="w-full max-w-[1000px] bg-[#141414] rounded-none md:rounded-xl shadow-2xl relative overflow-hidden flex flex-col border border-white/5 mb-8"
           >
-            {/* Close Button - App Store Style */}
+            {/* Close Button - Netflix Style */}
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 z-[60] w-10 h-10 rounded-full bg-black/50 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white hover:bg-black/80 transition-all active:scale-90"
+              className="absolute top-6 right-6 z-[70] w-9 h-9 rounded-full bg-[#141414] flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90 shadow-xl"
             >
-              <X size={20} />
+              <X size={24} />
             </button>
 
             {/* Hero Section */}
             <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
-              {/* Poster Background */}
+              {/* Poster Background (Layered for Zero Blanking) */}
               <motion.div 
                 layoutId={finalLayoutId}
                 transition={sharedTransition}
                 className="absolute inset-0 overflow-hidden"
               >
-                {showVideo && (movie.auto_play_video_url || movie.trailerUrl) ? (
-                  <div className="relative w-full h-full">
-                    {isHeroVideoLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 backdrop-blur-sm">
-                        <Spinner size={30} className="text-white/50" />
-                      </div>
-                    )}
+                {/* Fixed Background Poster */}
+                <MoviePoster 
+                  src={movie.posterUrl} 
+                  alt="" 
+                  priority={true} 
+                  className="absolute inset-0 h-full w-full object-cover opacity-80" 
+                />
+
+                {/* Overlaid Video (Fades in when loaded) */}
+                {showVideo && (movie.auto_play_video_url || movie.trailerUrl) && (
+                  <div className="absolute inset-0 w-full h-full">
                     <iframe
-                      src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1`}
-                      className={`h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-all duration-[8000ms] ${isHeroVideoLoading ? 'opacity-0' : 'opacity-70'}`}
+                      src={`${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '')}${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').includes('?') ? '&' : '?'}autoplay=1&mute=1&loop=1&playlist=${getEmbedUrl(movie.auto_play_video_url || movie.trailerUrl || '').split('/').pop()?.split('?')[0]}`}
+                      className={`h-full w-full transition-opacity duration-1000 ${isHeroVideoLoading ? 'opacity-0' : 'opacity-100'}`}
                       allow="autoplay; encrypted-media"
                       allowFullScreen
                       onLoad={() => setIsHeroVideoLoading(false)}
                     />
                   </div>
-                ) : (
-                  <MoviePoster src={movie.posterUrl} alt="" priority={true} className="h-full w-full object-cover scale-100 md:group-hover:scale-105 transition-transform duration-[8000ms] opacity-70" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
-                {/* Shimmer Effect during transition */}
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0.3, 0] }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_2s_infinite]"
-                  style={{ pointerEvents: 'none' }}
-                />
+                
+                <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/40 to-transparent" />
               </motion.div>
             
             {/* Content Overlay */}
-            <div className="relative z-10 p-8 md:p-14 w-full">
-              <motion.h2 
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 }
-                }}
-                className="text-5xl md:text-7xl font-black mb-8 tracking-tighter text-white line-clamp-2 leading-[0.9]"
-              >
-                {movie.title}
-              </motion.h2>
-              
-              <motion.div 
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 }
-                }}
-                className="flex flex-wrap items-center gap-4"
-              >
-                {(movie.trailerUrl || movie.viewUrl) && (
-                  <button 
-                    onClick={(e) => {
-                      if (movie.trailerUrl) {
-                        e.preventDefault();
-                        onView(movie.id);
-                        document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
-                      } else if (movie.viewUrl) {
-                        window.open(movie.viewUrl, '_blank');
-                        onView(movie.id);
-                      }
-                    }}
-                    className="bg-white text-black px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg disabled:opacity-50"
-                  >
-                    {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current md:w-6 md:h-6" />} {movie.trailerUrl ? 'Watch Now' : 'Watch'}
-                  </button>
-                )}
-                <a 
-                  href={movie.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  onClick={() => onDownload(movie.id)}
-                  className="bg-white/10 hover:bg-white/20 text-white px-6 md:px-10 py-3 md:py-4 rounded font-bold flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg backdrop-blur-xl border border-white/10 active:scale-95 disabled:opacity-50"
+            <div className="relative z-10 p-8 md:p-14 pb-12 w-full">
+              <div className="max-w-2xl">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center gap-2 mb-4"
                 >
-                  {loadingActions[`download-${movie.id}`] ? <Spinner size={20} /> : <Download size={20} className="md:w-6 md:h-6" />} Download
-                </a>
+                  <Logo showText={false} className="scale-75 -ml-2" />
+                  <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em]">Film</span>
+                </motion.div>
+
+                <motion.h2 
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="text-4xl md:text-6xl font-black mb-12 tracking-tighter text-white leading-[0.9]"
+                >
+                  {movie.title}
+                </motion.h2>
                 
-                {/* Social Sharing */}
-                <div className="flex items-center gap-2 ml-2">
+                <motion.div 
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                  className="flex flex-wrap items-center gap-4 mt-8"
+                >
+                  {(movie.trailerUrl || movie.viewUrl) && (
+                    <button 
+                      onClick={(e) => {
+                        if (movie.trailerUrl) {
+                          e.preventDefault();
+                          onView(movie.id);
+                          document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
+                        } else if (movie.viewUrl) {
+                          window.open(movie.viewUrl, '_blank');
+                          onView(movie.id);
+                        }
+                      }}
+                      className="bg-white text-black px-8 md:px-10 py-2.5 rounded font-black flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg"
+                    >
+                      {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current" />} {movie.trailerUrl ? 'Watch now' : 'Play'}
+                    </button>
+                  )}
+                  
+                  <a 
+                    href={movie.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    onClick={() => onDownload(movie.id)}
+                    className="bg-zinc-500/30 hover:bg-zinc-500/50 text-white px-8 md:px-10 py-2.5 rounded font-black flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg active:scale-95 backdrop-blur-md border border-white/10"
+                  >
+                    {loadingActions[`download-${movie.id}`] ? <Spinner size={20} /> : <Download size={22} />} Download
+                  </a>
+                  
                   <button 
                     onClick={handleShare}
-                    className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all font-bold text-sm border border-white/5 active:scale-95"
+                    className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-[#141414]/80 hover:bg-white/10 text-white rounded-full transition-all border-2 border-white/40 active:scale-95 group ml-auto md:ml-0"
+                    title="Share"
                   >
-                    <Share2 size={20} />
-                    Share
+                    <Share2 size={20} className="group-hover:scale-110 transition-transform" />
                   </button>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </div>
           </div>
-
-          {/* Close Button - Moved after Hero to ensure it's on top */}
-          <button 
-            onClick={onClose} 
-            className="absolute top-4 right-4 md:top-6 md:right-6 z-[60] p-2 bg-black/40 hover:bg-white/10 text-white rounded-full transition-all backdrop-blur-md border border-white/10 active:scale-90"
-          >
-            <X size={20} />
-          </button>
 
           {/* Content Section */}
           <motion.div 
@@ -3213,172 +3210,145 @@ const MovieDetailModal: React.FC<{
               hidden: { opacity: 0, y: 10 },
               visible: { opacity: 1, y: 0 }
             }}
-            className="p-6 md:p-14 pt-10 space-y-16"
+            className="p-8 md:p-14 pt-10 space-y-16"
           >
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Left Column: Metadata & Description */}
-            <div className="lg:col-span-2 space-y-8">
-              <div className="flex flex-wrap items-center gap-5 text-sm font-semibold tracking-wide">
-                <span className="text-green-500">{movie.match_score || 98}% Match</span>
-                <span className="text-white/50">{movie.release_year || (movie.created_at ? new Date(movie.created_at).getFullYear() : '2026')}</span>
-                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70">{movie.maturity_rating || '18+'}</span>
-                <span className="text-white/50">{movie.duration || '2h 15m'}</span>
-                <span className="border border-white/30 px-2 py-0.5 text-[11px] rounded-sm text-white/70 uppercase">{movie.quality || 'HD'}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="md:col-span-2 space-y-6">
+              <div className="flex flex-wrap items-center gap-4 text-sm font-bold">
+                <span className="text-[#46d369]">{movie.match_score || 98}% Match</span>
+                <span className="text-white/60">{movie.release_year || '2026'}</span>
+                <span className="border border-white/40 px-1.5 py-0.5 text-[10px] rounded text-white/90">{movie.maturity_rating || '18+'}</span>
+                <span className="text-white/60">{movie.duration || '2h 15m'}</span>
+                <span className="border border-white/30 px-1 py-0.5 text-[9px] rounded-sm text-white/50 uppercase leading-none">HD</span>
               </div>
               
-              <p className="text-lg md:text-xl text-white/80 leading-relaxed font-light">
+              <p className="text-lg md:text-xl text-white/90 leading-relaxed font-light">
                 {movie.description}
               </p>
             </div>
 
-            {/* Right Column: Cast & Details */}
-            <div className="space-y-6 text-sm border-l border-white/5 pl-8 hidden lg:block">
+            <div className="space-y-4 text-xs md:text-sm">
               {movie.cast && (
-                <div className="space-y-1">
-                  <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Cast</span>
-                  <span className="text-white/70 block leading-snug">{movie.cast}</span>
+                <div className="leading-relaxed">
+                  <span className="text-white/40 font-medium">Cast:</span>{' '}
+                  <span className="text-white/80">{movie.cast}</span>
                 </div>
               )}
               {movie.director && (
-                <div className="space-y-1">
-                  <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Director</span>
-                  <span className="text-white/70 block leading-snug">{movie.director}</span>
+                <div className="leading-relaxed">
+                  <span className="text-white/40 font-medium">Director:</span>{' '}
+                  <span className="text-white/80">{movie.director}</span>
                 </div>
               )}
-              <div className="space-y-1">
-                <span className="text-white/30 block uppercase text-[10px] font-bold tracking-widest">Genres</span>
-                <span className="text-white/70 block leading-snug">{movie.category}</span>
-              </div>
-            </div>
-            
-            {/* Mobile Cast & Details */}
-            <div className="space-y-4 text-sm lg:hidden">
-              {movie.cast && (
-                <div>
-                  <span className="text-white/30">Cast: </span>
-                  <span className="text-white/70">{movie.cast}</span>
-                </div>
-              )}
-              {movie.director && (
-                <div>
-                  <span className="text-white/30">Director: </span>
-                  <span className="text-white/70">{movie.director}</span>
-                </div>
-              )}
-              <div>
-                <span className="text-white/30">Genres: </span>
-                <span className="text-white/70">{movie.category}</span>
+              <div className="leading-relaxed">
+                <span className="text-white/40 font-medium">Genres:</span>{' '}
+                <span className="text-white/80">{movie.category}</span>
               </div>
             </div>
           </div>
 
-          {/* Trailer Section */}
+          {/* Trailer Section - Netflix Style */}
           {movie.trailerUrl && (
             <div id="trailer-section" className="space-y-6 pt-4">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight">Watch Now</h3>
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white/90">Trailers & More</h3>
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900/50 border border-white/10 group/trailer">
+                {/* Zero Blanking: Show poster while trailer is loading */}
+                <MoviePoster 
+                  src={movie.posterUrl} 
+                  alt="" 
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${isTrailerLoading ? 'opacity-40' : 'opacity-0'}`} 
+                />
+                
                 {isTrailerLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0a0a0a]">
-                    <div className="flex flex-col items-center gap-4">
-                      <Spinner size={40} className="text-emerald-500" />
-                      <span className="text-white/40 text-sm font-medium animate-pulse">Preparing your experience...</span>
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 backdrop-blur-sm">
+                    <Spinner size={32} className="text-white/30" />
                   </div>
                 )}
                 <iframe 
                   src={(() => {
                     const url = movie.trailerUrl;
                     if (!url) return '';
+                    let finalUrl = '';
                     // Auto-convert Google Drive links
                     if (url.includes('drive.google.com/file/d/')) {
                       const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
                       if (match && match[1]) {
-                        return `https://drive.google.com/file/d/${match[1]}/preview`;
+                        finalUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
                       }
                     }
                     // Auto-convert YouTube links
-                    if (url.includes('youtube.com/watch?v=')) {
+                    else if (url.includes('youtube.com/watch?v=')) {
                       try {
                         const videoId = new URL(url).searchParams.get('v');
-                        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+                        if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
                       } catch (e) {}
                     }
-                    if (url.includes('youtu.be/')) {
+                    else if (url.includes('youtu.be/')) {
                       const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+                      if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
                     }
-                    return url;
+                    else {
+                      finalUrl = url;
+                    }
+                    
+                    if (finalUrl) {
+                      return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}modestbranding=1&rel=0&iv_load_policy=3`;
+                    }
+                    return finalUrl;
                   })()} 
                   title={`${movie.title} Trailer`}
-                  className="absolute top-0 left-0 w-full h-full"
+                  className={`absolute top-0 left-0 w-full h-full transition-opacity duration-1000 ${isTrailerLoading ? 'opacity-0' : 'opacity-100'}`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                   allowFullScreen
-                  webkitallowfullscreen="true"
-                  mozallowfullscreen="true"
                   onLoad={() => setIsTrailerLoading(false)}
                 ></iframe>
               </div>
               <a 
-                href={(() => {
-                  const url = movie.trailerUrl;
-                  if (!url) return '#';
-                  // Auto-convert Google Drive links
-                  if (url.includes('drive.google.com/file/d/')) {
-                    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (match && match[1]) {
-                      return `https://drive.google.com/file/d/${match[1]}/view`;
-                    }
-                  }
-                  // Auto-convert YouTube links
-                  if (url.includes('youtube.com/watch?v=')) {
-                    try {
-                      const videoId = new URL(url).searchParams.get('v');
-                      if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
-                    } catch (e) {}
-                  }
-                  if (url.includes('youtu.be/')) {
-                    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                    if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
-                  }
-                  return url;
-                })()}
+                href={movie.trailerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold text-sm transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg font-bold text-sm transition-all border border-white/5"
               >
-                <Play size={16} /> Open in Fullscreen
+                <Maximize size={16} /> Open in Fullscreen
               </a>
             </div>
           )}
 
-          {/* More Like This Section */}
+          {/* More Like This Section - Netflix Style */}
           {similarMovies.length > 0 && (
-            <div className="space-y-8">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight">More Like This</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
+            <div className="space-y-8 border-t border-white/5 pt-16">
+              <div className="flex items-end justify-between">
+                <h3 className="text-xl md:text-2xl font-bold text-white">More Like This</h3>
+                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{movie.category}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
                 {similarMovies.map((m) => (
-                  <div 
+                  <motion.div 
                     key={m.id} 
+                    whileHover={{ scale: 1.02 }}
                     onClick={() => onMovieClick(m)}
-                    className="bg-[#242424] rounded-lg overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
+                    className="bg-[#1a1a1a] rounded-xl overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
                   >
-                    <div className="aspect-[16/9] relative overflow-hidden">
+                    <div className="aspect-[2/3] relative overflow-hidden">
                       <motion.div 
                         layoutId={`movie-poster-${m.id}-similar`} 
                         transition={sharedTransition}
                         className="w-full h-full"
                       >
-                        <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:scale-110 transition-transform duration-700" />
+                        <MoviePoster src={m.posterUrl} alt={m.title} className="group-hover:opacity-80 transition-opacity duration-300" />
                       </motion.div>
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-all" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 group-hover:opacity-40 transition-opacity" />
                     </div>
-                    <div className="p-4 md:p-5 space-y-2 md:space-y-3">
+                    <div className="p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white/40">{m.release_year || (m.created_at ? new Date(m.created_at).getFullYear() : '2026')}</span>
+                        <span className="text-[10px] font-medium text-white/40">{m.release_year || '2026'}</span>
+                        <div className="text-emerald-400 text-[10px] font-bold">
+                          {m.match_score || 98}% Match
+                        </div>
                       </div>
-                      <h4 className="font-bold text-sm md:text-base truncate text-white/90">{m.title}</h4>
+                      <h4 className="font-bold text-sm truncate text-white/90">{m.title}</h4>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
