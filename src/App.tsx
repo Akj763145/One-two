@@ -2887,120 +2887,18 @@ const MovieCard: React.FC<{
         >
           <MoviePoster src={movie.posterUrl} alt={movie.title} className="group-hover:scale-105 transition-transform duration-500" />
           
-          {/* Persistent Info Icon for Discoverability */}
-          <div className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/80 border border-white/10 text-white/70 group-hover:text-white group-hover:bg-red-600 transition-all duration-300 shadow-lg">
-            <Info size={14} />
-          </div>
-          
-          {/* Tooltip */}
-          <div className="absolute inset-0 z-10 hidden group-hover:flex flex-col justify-end p-4 bg-gradient-to-t from-black/95 to-transparent pointer-events-none">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Info size={14} className="text-white" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Click for details</span>
-            </div>
-            <h4 className="text-white font-bold text-sm mb-1">{movie.title}</h4>
-            <p className="text-white/70 text-xs line-clamp-2 mb-2">{movie.description}</p>
+          {/* Overlay Info */}
+          <div className="absolute inset-0 z-10 flex flex-col justify-end p-4 bg-gradient-to-t from-black/90 via-black/20 to-transparent">
+            <h3 className="text-white font-bold text-lg leading-tight mb-1">
+              {movie.title}
+            </h3>
+            {movie.category && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">
+                {movie.category} • {movie.release_year || 'N/A'}
+              </span>
+            )}
           </div>
         </motion.div>
-      </div>
-
-      <div className="flex flex-col gap-2.5 px-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-current font-bold text-sm md:text-base leading-tight group-hover:opacity-80 transition-opacity whitespace-normal flex-1">
-            {movie.title}
-          </h3>
-          {movie.category && (
-            <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 mt-0.5">
-              {movie.category}
-            </span>
-          )}
-        </div>
-        <p className="text-white/50 text-[10px] md:text-xs line-clamp-2 leading-relaxed">
-          {movie.description}
-        </p>
-        
-        {(matchesCast || matchesDirector) && (
-          <div className="flex flex-col gap-1 mt-1">
-            {matchesDirector && (
-              <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-blue-400 font-medium">
-                <span className="opacity-60 uppercase tracking-tighter">Director:</span>
-                <span className="line-clamp-1">{movie.director}</span>
-              </div>
-            )}
-            {matchesCast && (
-              <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-emerald-400 font-medium">
-                <span className="opacity-60 uppercase tracking-tighter">Cast:</span>
-                <span className="line-clamp-1">{movie.cast}</span>
-              </div>
-            )}
-          </div>
-        )}
-        
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            {(movie.trailerUrl || movie.viewUrl) && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (movie.trailerUrl) {
-                    onShowDetails(movie, finalLayoutId);
-                    onView(movie.id);
-                    setTimeout(() => {
-                      document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }, 100);
-                  } else if (movie.viewUrl) {
-                    window.open(movie.viewUrl, '_blank');
-                    onView(movie.id);
-                  }
-                }}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-green-700 text-white py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:from-emerald-400 hover:to-green-600 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {loadingActions[`view-${movie.id}`] ? <Spinner size={14} /> : <Play size={14} className="fill-current" />} Watch
-              </button>
-            )}
-            <a 
-              href={movie.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              onClick={() => onDownload(movie.id)}
-              className="flex-1 bg-white/10 border border-white/10 text-current py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white/20 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {loadingActions[`download-${movie.id}`] ? <Spinner size={14} /> : <Download size={14} />} Download
-            </a>
-          </div>
-          
-          <button 
-            onClick={() => onShowDetails(movie)}
-            className="w-full bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/5"
-          >
-            <Info size={14} className="text-emerald-400" /> Full Movie Details
-          </button>
-
-          {isAdmin && (
-            <div className="flex flex-col gap-2 pt-1 border-t border-white/5 mt-1">
-              <div className="flex items-center justify-between px-1 text-[10px] md:text-xs text-white/50 font-medium">
-                <span className="flex items-center gap-1"><Eye size={12} /> {movie.views || 0} Views</span>
-                <span className="flex items-center gap-1"><Download size={12} /> {movie.downloads || 0} Downloads</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => onEdit(movie)}
-                  className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                >
-                  <Edit size={14} /> Edit
-                </button>
-                <button 
-                  onClick={() => onDelete(movie.id)}
-                  className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-xl text-[10px] md:text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                >
-                  <Trash2 size={14} /> Delete
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
