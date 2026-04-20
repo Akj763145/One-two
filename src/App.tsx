@@ -435,7 +435,7 @@ const Dashboard: React.FC<{
                   transition={sharedTransition}
                   className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0"
                 >
-                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </motion.div>
                 <div className="flex-1 min-w-0">
                   <h5 className="text-sm font-bold truncate">{movie.title}</h5>
@@ -746,16 +746,9 @@ const Navbar: React.FC<{
   }, [isSearchActive]);
 
   useEffect(() => {
-    let ticking = false;
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrolled = window.scrollY > 50;
-          setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
-          ticking = false;
-        });
-        ticking = true;
-      }
+      const scrolled = window.scrollY > 50;
+      setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -1170,16 +1163,9 @@ export default function App() {
     document.documentElement.classList.add('dark');
     fetchMovies();
 
-    let ticking = false;
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const shouldShow = window.scrollY > 400;
-          setShowGoToTop(prev => prev !== shouldShow ? shouldShow : prev);
-          ticking = false;
-        });
-        ticking = true;
-      }
+      const shouldShow = window.scrollY > 400;
+      setShowGoToTop(prev => prev !== shouldShow ? shouldShow : prev);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
