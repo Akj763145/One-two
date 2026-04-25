@@ -19,3 +19,17 @@ VALUES (
   }'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Insert default Ad settings if they don't exist
+INSERT INTO site_settings (id, value)
+VALUES (
+  'ads',
+  '{
+    "enabled": true,
+    "homeTop": "",
+    "homeMiddle": "",
+    "homeBottom": "",
+    "detailsModal": ""
+  }'
+)
+ON CONFLICT (id) DO NOTHING;

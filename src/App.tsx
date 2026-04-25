@@ -48,12 +48,47 @@ interface Movie {
 
 interface AuditLog {
   id: string;
-  action: 'create' | 'update' | 'delete' | 'bulk_update' | 'bulk_delete';
-  entity: 'movie';
+  action: 'create' | 'update' | 'delete' | 'bulk_update' | 'bulk_delete' | 'login' | 'logout' | 'seo_update' | 'ads_update';
+  entity: 'movie' | 'site_settings' | 'admin';
   details: string;
   admin_email: string;
   timestamp: string;
 }
+
+interface AdSettings {
+  enabled: boolean;
+  homeTop: string;
+  homeMiddle: string;
+  homeBottom: string;
+  detailsModal: string;
+}
+
+const AdBanner: React.FC<{ code: string, className?: string }> = ({ code, className = "" }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current && code) {
+      containerRef.current.innerHTML = '';
+      try {
+        const range = document.createRange();
+        const fragment = range.createContextualFragment(code);
+        containerRef.current.appendChild(fragment);
+      } catch (e) {
+        console.error('Failed to render ad code:', e);
+        // Fallback for codes that don't like contextual fragment
+        containerRef.current.innerHTML = code;
+      }
+    }
+  }, [code]);
+
+  if (!code) return null;
+  return (
+    <div 
+      ref={containerRef}
+      className={`ad-container flex justify-center w-full overflow-hidden min-h-[10px] ${className}`} 
+    />
+  );
+};
 
 const getEmbedUrl = (url: string) => {
   if (!url) return '';
@@ -170,8 +205,8 @@ const VideoPlayer: React.FC<{
 };
 
 const AdminSidebar: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
@@ -180,6 +215,7 @@ const AdminSidebar: React.FC<{
     { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
     { id: 'feedback', label: 'Feedback', icon: Users, color: 'text-emerald-500' },
     { id: 'logs', label: 'Audit Logs', icon: Activity, color: 'text-amber-500' },
+    { id: 'ads', label: 'Ads Manager', icon: Link, color: 'text-orange-500' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'text-purple-500' },
   ] as const;
 
@@ -483,17 +519,16 @@ const Dashboard: React.FC<{
 };
 
 const AdminMobileNav: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Stats', icon: BarChart3 },
     { id: 'movies', label: 'Movies', icon: Film },
-    { id: 'feedback', label: 'Users', icon: Users },
-    { id: 'logs', label: 'Logs', icon: Activity },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'ads', label: 'Ads', icon: Link },
+    { id: 'settings', label: 'Cfg', icon: Settings },
   ] as const;
 
   return (
@@ -975,6 +1010,73 @@ const MeshOrb = () => (
 );
 
 
+const AdsManager: React.FC<{ 
+  settings: AdSettings, 
+  onSave: (settings: AdSettings) => void 
+}> = ({ settings, onSave }) => {
+  const [formData, setFormData] = useState(settings);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onSave(formData);
+    setTimeout(() => setIsSaving(false), 500);
+  };
+
+  return (
+    <div className="space-y-6 glass-panel p-6 rounded-2xl border border-white/10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center">
+            <Link size={20} />
+          </div>
+          <div>
+            <h4 className="text-lg font-bold">Ad Configuration</h4>
+            <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Inject advertisement codes</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
+          className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formData.enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}
+        >
+          {formData.enabled ? 'Ads Active' : 'Ads Disabled'}
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {[
+          { id: 'homeTop', label: 'Home Page Top Banner', desc: 'Below Featured section' },
+          { id: 'homeMiddle', label: 'Home Page Middle Banner', desc: 'Between Categories and Trending' },
+          { id: 'homeBottom', label: 'Home Page Bottom Banner', desc: 'Above Footer' },
+          { id: 'detailsModal', label: 'Details Modal Banner', desc: 'Inside movie details popup' },
+        ].map((field) => (
+          <div key={field.id} className="space-y-2">
+            <div className="flex justify-between items-end px-1">
+              <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{field.label}</label>
+              <span className="text-[9px] text-white/20 italic">{field.desc}</span>
+            </div>
+            <textarea 
+              value={(formData as any)[field.id]} 
+              onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-blue-300 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all resize-none"
+              rows={3}
+              placeholder="Paste <script> or <ins> code here..."
+            />
+          </div>
+        ))}
+      </div>
+
+      <button 
+        onClick={handleSave}
+        disabled={isSaving}
+        className="w-full bg-white text-black font-black uppercase tracking-widest py-4 rounded-xl hover:bg-orange-500 hover:text-white transition-all active:scale-[0.98] mt-4 shadow-xl flex items-center justify-center gap-2"
+      >
+        {isSaving ? <Loader size={18} className="animate-spin" /> : 'Update Ad Configuration'}
+      </button>
+    </div>
+  );
+};
+
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -1014,12 +1116,19 @@ export default function App() {
     setActiveCategory(category);
   };
 
-  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs'>('dashboard');
+  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads'>('dashboard');
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [seoSettings, setSeoSettings] = useState({
     title: 'Movie Wallah - Download any movie Here',
     description: 'Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.',
     keywords: 'movies, download movies, movie reviews, cinema, movie wallah, movie wallah online'
+  });
+  const [adSettings, setAdSettings] = useState<AdSettings>({
+    enabled: true,
+    homeTop: '',
+    homeMiddle: '',
+    homeBottom: '',
+    detailsModal: ''
   });
   
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -1046,22 +1155,39 @@ export default function App() {
           if (data && data.value) {
             setSeoSettings(data.value);
             localStorage.setItem('movieWallah_seo', JSON.stringify(data.value));
-            return;
-          }
-          if (error) console.warn('Supabase SEO fetch error:', error.message);
+          } else if (error) console.warn('Supabase SEO fetch error:', error.message);
         } catch (e) {
           console.error('Failed to fetch SEO from Supabase');
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('id', 'ads')
+            .single();
+          
+          if (data && data.value) {
+            setAdSettings(data.value);
+            localStorage.setItem('movieWallah_ads', JSON.stringify(data.value));
+          }
+        } catch (e) {
+          console.error('Failed to fetch Ads from Supabase');
         }
       }
 
       // Fallback to localStorage
       const savedSeo = localStorage.getItem('movieWallah_seo');
-      if (savedSeo) {
+      if (savedSeo && !seoSettings.title) {
         try {
           setSeoSettings(JSON.parse(savedSeo));
-        } catch (e) {
-          console.error('Failed to parse saved SEO settings');
-        }
+        } catch (e) {}
+      }
+      const savedAds = localStorage.getItem('movieWallah_ads');
+      if (savedAds) {
+        try {
+          setAdSettings(JSON.parse(savedAds));
+        } catch (e) {}
       }
     };
 
@@ -1732,6 +1858,41 @@ export default function App() {
                         <AuditLogManager logs={auditLogs} />
                       </div>
                     )}
+                    {adminView === 'ads' && (
+                      <div className="px-6 md:px-16 pt-12 pb-20">
+                        <div className="mb-12">
+                          <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+                            <Link className="text-orange-500" size={32} /> Advertisement Management
+                          </h2>
+                          <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Control site-wide ad delivery</p>
+                        </div>
+                        
+                        <div className="max-w-4xl">
+                          <AdsManager 
+                            settings={adSettings} 
+                            onSave={async (newSettings) => {
+                              setAdSettings(newSettings);
+                              localStorage.setItem('movieWallah_ads', JSON.stringify(newSettings));
+                              if (supabase) {
+                                try {
+                                  const { error } = await supabase
+                                    .from('site_settings')
+                                    .upsert({ id: 'ads', value: newSettings, updated_at: new Date().toISOString() });
+                                  if (error) throw error;
+                                  addAuditLog('ads_update', 'Updated advertisement settings');
+                                  toast.success('Ad settings updated successfully');
+                                } catch (e) {
+                                  console.error('Failed to save Ads to Supabase');
+                                  toast.error('Saved locally, but failed to sync with cloud');
+                                }
+                              } else {
+                                toast.success('Ad settings updated locally');
+                              }
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    )}
                     {adminView === 'settings' && (
                       <div className="px-6 md:px-16 pt-12 pb-20">
                         <div className="mb-12">
@@ -1788,6 +1949,7 @@ export default function App() {
               <>
               {/* Hero Section */}
             {featuredMovies.length > 0 && !searchQuery && !isSearchActive && activeCategory === 'All' && (
+              <>
               <div className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden pt-10 md:pt-16">
                 <Swiper
                   effect={'coverflow'}
@@ -1883,6 +2045,12 @@ export default function App() {
                   ))}
                 </Swiper>
               </div>
+              {adSettings.enabled && adSettings.homeTop && (
+                <div className="max-w-7xl mx-auto px-4 mt-8">
+                  <AdBanner code={adSettings.homeTop} />
+                </div>
+              )}
+            </>
             )}
 
             {/* Search Results or Rows */}
@@ -1906,6 +2074,12 @@ export default function App() {
                   ))}
                 </div>
               </div>
+
+              {adSettings.enabled && adSettings.homeMiddle && (
+                <div className="max-w-7xl mx-auto px-4 mb-12">
+                  <AdBanner code={adSettings.homeMiddle} />
+                </div>
+              )}
 
               {searchQuery || activeCategory !== 'All' ? (
                 <div className="mb-12">
@@ -2005,6 +2179,12 @@ export default function App() {
           </>
         )}
         
+        {adSettings.enabled && adSettings.homeBottom && (
+          <div className="max-w-7xl mx-auto px-4 mb-20 relative z-20">
+            <AdBanner code={adSettings.homeBottom} />
+          </div>
+        )}
+
       </main>
       
       {/* Footer */}
@@ -2289,6 +2469,7 @@ export default function App() {
               }}
               onDownload={handleDownload}
               onView={handleView}
+              adSettings={adSettings}
               loadingActions={loadingActions}
             />
           )}
@@ -3070,9 +3251,10 @@ const MovieDetailModal: React.FC<{
   onMovieClick: (m: Movie) => void;
   onDownload: (id: string) => void;
   onView: (id: string) => void;
+  adSettings: AdSettings;
   layoutId?: string;
   loadingActions?: Record<string, boolean>;
-}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, layoutId, loadingActions = {} }) => {
+}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, adSettings, layoutId, loadingActions = {} }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -3439,6 +3621,12 @@ const MovieDetailModal: React.FC<{
               >
                 <Maximize size={16} /> Open in Fullscreen
               </a>
+            </div>
+          )}
+
+          {adSettings.enabled && adSettings.detailsModal && (
+            <div className="py-8 border-t border-white/5 mt-8">
+              <AdBanner code={adSettings.detailsModal} />
             </div>
           )}
 
