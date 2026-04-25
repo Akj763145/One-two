@@ -17,7 +17,6 @@
     "@tailwindcss/vite": "^4.1.14",
     "@types/d3": "^7.4.3",
     "@types/video.js": "^7.3.58",
-    "@vitejs/plugin-legacy": "^6.1.1",
     "@vitejs/plugin-react": "^5.0.4",
     "d3": "^7.9.0",
     "dotenv": "^17.2.3",
@@ -34,7 +33,6 @@
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
     "swiper": "^12.1.2",
-    "terser": "^5.46.2",
     "video.js": "^8.23.7",
     "vite": "^6.2.0"
   },
