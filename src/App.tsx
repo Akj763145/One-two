@@ -63,6 +63,21 @@ interface AdSettings {
   detailsModal: string;
 }
 
+const isSmartTV = () => {
+  if (typeof window === 'undefined') return false;
+  const ua = window.navigator.userAgent.toLowerCase();
+  return (
+    ua.indexOf('smart-tv') > -1 || 
+    ua.indexOf('smarttv') > -1 || 
+    ua.indexOf('webos') > -1 || 
+    ua.indexOf('lg browser') > -1 || 
+    ua.indexOf('tizen') > -1 || 
+    ua.indexOf('netcast') > -1 ||
+    ua.indexOf('mediasurface') > -1 ||
+    ua.indexOf('hbbtv') > -1
+  );
+};
+
 const AdBanner: React.FC<{ code: string, className?: string }> = ({ code, className = "" }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -70,12 +85,28 @@ const AdBanner: React.FC<{ code: string, className?: string }> = ({ code, classN
     if (containerRef.current && code) {
       containerRef.current.innerHTML = '';
       try {
-        const range = document.createRange();
-        const fragment = range.createContextualFragment(code);
-        containerRef.current.appendChild(fragment);
+        // Use a safer method for older browsers (like LG WebOS)
+        if (typeof document.createRange === 'function' && typeof Range.prototype.createContextualFragment === 'function') {
+          const range = document.createRange();
+          range.selectNode(containerRef.current);
+          const fragment = range.createContextualFragment(code);
+          containerRef.current.appendChild(fragment);
+          
+          // Re-execute scripts as contextual fragment doesn't always run them on all browsers
+          const scripts = containerRef.current.querySelectorAll('script');
+          scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+            newScript.textContent = oldScript.textContent;
+            if (oldScript.parentNode) {
+              oldScript.parentNode.replaceChild(newScript, oldScript);
+            }
+          });
+        } else {
+          containerRef.current.innerHTML = code;
+        }
       } catch (e) {
         console.error('Failed to render ad code:', e);
-        // Fallback for codes that don't like contextual fragment
         containerRef.current.innerHTML = code;
       }
     }
@@ -3204,7 +3235,7 @@ const MovieCard: React.FC<{
       )}
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
         <motion.div 
-          layoutId={finalLayoutId}
+          layoutId={isSmartTV() ? undefined : finalLayoutId}
           transition={sharedTransition}
           onClick={() => onShowDetails(movie, finalLayoutId)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
@@ -3448,7 +3479,7 @@ const MovieDetailModal: React.FC<{
             <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
               {/* Poster Background (Layered for Zero Blanking) */}
               <motion.div 
-                layoutId={finalLayoutId}
+                layoutId={isSmartTV() ? undefined : finalLayoutId}
                 transition={sharedTransition}
                 className="absolute inset-0 overflow-hidden"
               >

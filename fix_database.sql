@@ -1,3 +1,6 @@
+-- Fix Database Schema and Security Settings
+-- This script ensures all tables exist and sets up Row Level Security (RLS) policies
+
 -- 1. Create site_settings table if it doesn't exist
 CREATE TABLE IF NOT EXISTS site_settings (
   id TEXT PRIMARY KEY,
@@ -69,33 +72,41 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
 -- 6. Create Policies to allow public (anon) access
+-- NOTE: In a production app, you would restrict INSERT/UPDATE/DELETE to authenticated admins.
+-- For now, we allow public access so the app works immediately.
+
+-- Policies for movies
 CREATE POLICY "Allow public read access on movies" ON movies FOR SELECT USING (true);
 CREATE POLICY "Allow public insert access on movies" ON movies FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update access on movies" ON movies FOR UPDATE USING (true);
 CREATE POLICY "Allow public delete access on movies" ON movies FOR DELETE USING (true);
 
+-- Policies for site_settings
 CREATE POLICY "Allow public read access on site_settings" ON site_settings FOR SELECT USING (true);
 CREATE POLICY "Allow public insert access on site_settings" ON site_settings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update access on site_settings" ON site_settings FOR UPDATE USING (true);
 
+-- Policies for feedback
 CREATE POLICY "Allow public read access on feedback" ON feedback FOR SELECT USING (true);
 CREATE POLICY "Allow public insert access on feedback" ON feedback FOR INSERT WITH CHECK (true);
 
+-- Policies for audit_logs
 CREATE POLICY "Allow public read access on audit_logs" ON audit_logs FOR SELECT USING (true);
 CREATE POLICY "Allow public insert access on audit_logs" ON audit_logs FOR INSERT WITH CHECK (true);
 
+-- Policies for reviews
 CREATE POLICY "Allow public read access on reviews" ON reviews FOR SELECT USING (true);
 CREATE POLICY "Allow public insert access on reviews" ON reviews FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public delete access on reviews" ON reviews FOR DELETE USING (true);
 
--- 7. Insert default settings
+-- 7. Insert default settings if they don't exist
 INSERT INTO site_settings (id, value)
 VALUES (
   'seo',
   '{
     "title": "Movie Wallah - Download any movie Here",
-    "description": "Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.",
-    "keywords": "movies, download movies, movie reviews, cinema, movie wallah, movie wallah online"
+    "description": "Welcome to Movie Wallah.",
+    "keywords": "movies, cinema"
   }'
 )
 ON CONFLICT (id) DO NOTHING;
