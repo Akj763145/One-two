@@ -59,6 +59,7 @@ interface AdSettings {
   enabled: boolean;
   homeTop: string;
   homeMiddle: string;
+  homeTrendingAndWatchNext?: string;
   homeBottom: string;
   detailsModal: string;
 }
@@ -1047,6 +1048,7 @@ const AdsManager: React.FC<{
         {[
           { id: 'homeTop', label: 'Home Page Top Banner', desc: 'Below Featured section' },
           { id: 'homeMiddle', label: 'Home Page Middle Banner', desc: 'Between Categories and Trending' },
+          { id: 'homeTrendingAndWatchNext', label: 'Home Page Trending Banner', desc: 'Between Trending and Watch Next' },
           { id: 'homeBottom', label: 'Home Page Bottom Banner', desc: 'Above Footer' },
           { id: 'detailsModal', label: 'Details Modal Banner', desc: 'Inside movie details popup' },
         ].map((field) => (
@@ -1127,6 +1129,7 @@ export default function App() {
     enabled: true,
     homeTop: '',
     homeMiddle: '',
+    homeTrendingAndWatchNext: '',
     homeBottom: '',
     detailsModal: ''
   });
@@ -2149,6 +2152,12 @@ export default function App() {
                           </SwiperSlide>
                         ))}
                       </Swiper>
+                    </div>
+                  )}
+
+                  {adSettings.enabled && adSettings.homeTrendingAndWatchNext && (
+                    <div className="max-w-7xl mx-auto px-4 mb-12">
+                      <AdBanner code={adSettings.homeTrendingAndWatchNext} />
                     </div>
                   )}
                   
