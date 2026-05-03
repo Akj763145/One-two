@@ -529,6 +529,8 @@ const AdminMobileNav: React.FC<{
   const menuItems = [
     { id: 'dashboard', label: 'Stats', icon: BarChart3 },
     { id: 'movies', label: 'Movies', icon: Film },
+    { id: 'feedback', label: 'Feedback', icon: Users },
+    { id: 'logs', label: 'Logs', icon: Activity },
     { id: 'ads', label: 'Ads', icon: Link },
     { id: 'settings', label: 'Cfg', icon: Settings },
   ] as const;
