@@ -60,6 +60,7 @@ interface AdSettings {
   homeTop: string;
   homeMiddle: string;
   homeTrendingAndWatchNext?: string;
+  homeGridInline?: string;
   homeBottom: string;
   detailsModal: string;
 }
@@ -1049,6 +1050,7 @@ const AdsManager: React.FC<{
           { id: 'homeTop', label: 'Home Page Top Banner', desc: 'Below Featured section' },
           { id: 'homeMiddle', label: 'Home Page Middle Banner', desc: 'Between Categories and Trending' },
           { id: 'homeTrendingAndWatchNext', label: 'Home Page Trending Banner', desc: 'Between Trending and Watch Next' },
+          { id: 'homeGridInline', label: 'Home Page Inline Grid Banner', desc: 'After every 10 movie cards in Watch Next grid' },
           { id: 'homeBottom', label: 'Home Page Bottom Banner', desc: 'Above Footer' },
           { id: 'detailsModal', label: 'Details Modal Banner', desc: 'Inside movie details popup' },
         ].map((field) => (
@@ -1130,6 +1132,7 @@ export default function App() {
     homeTop: '',
     homeMiddle: '',
     homeTrendingAndWatchNext: '',
+    homeGridInline: '',
     homeBottom: '',
     detailsModal: ''
   });
@@ -2174,8 +2177,15 @@ export default function App() {
                           {isLoading ? (
                             Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                           ) : (
-                            currentMovies.map((movie) => (
-                              <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} loadingActions={loadingActions} />
+                            currentMovies.map((movie, index) => (
+                              <React.Fragment key={movie.id}>
+                                <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} loadingActions={loadingActions} />
+                                {(index + 1) % 10 === 0 && index !== currentMovies.length - 1 && adSettings.enabled && adSettings.homeGridInline && (
+                                  <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 w-full my-2 flex justify-center">
+                                    <AdBanner code={adSettings.homeGridInline} />
+                                  </div>
+                                )}
+                              </React.Fragment>
                             ))
                           )}
                         </div>
