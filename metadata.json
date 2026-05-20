@@ -1,5 +1,8 @@
 {
   "name": "Movie Wallah",
-  "description": "A movie sharing website with an admin panel to add, edit, and delete movie links.",
-  "requestFramePermissions": []
+  "description": "A movie sharing website with an admin panel to add, edit, and delete movie links with Google Drive integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

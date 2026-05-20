@@ -31,9 +31,13 @@ CREATE TABLE IF NOT EXISTS movies (
   is_trending BOOLEAN DEFAULT false,
   auto_play_video BOOLEAN DEFAULT false,
   auto_play_video_url TEXT,
-  player_type TEXT DEFAULT 'iframe',
+  player_type TEXT DEFAULT 'iframe' CHECK (player_type IN ('iframe', 'vidstack', 'plyr')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Update constraint if exists
+ALTER TABLE movies DROP CONSTRAINT IF EXISTS check_player_type;
+ALTER TABLE movies ADD CONSTRAINT check_player_type CHECK (player_type IN ('iframe', 'vidstack', 'plyr'));
 
 -- 3. Create feedback table if it doesn't exist
 CREATE TABLE IF NOT EXISTS feedback (

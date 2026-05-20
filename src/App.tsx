@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize } from 'lucide-react';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
+import { initAuth, googleSignIn, getAccessToken, logoutGoogle } from './lib/firebaseAuth';
+import { DriveBrowser } from './components/DriveBrowser';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plyr } from "plyr-react";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -43,7 +44,6 @@ interface Movie {
   match_score?: number;
   auto_play_video?: boolean;
   auto_play_video_url?: string;
-  player_type?: 'iframe' | 'plyr';
 }
 
 interface AuditLog {
@@ -92,129 +92,23 @@ const AdBanner: React.FC<{ code: string, className?: string }> = ({ code, classN
   );
 };
 
-const getEmbedUrl = (url: string) => {
-  if (!url) return '';
-  
-  // Handle YouTube
-  let videoId = '';
-  if (url.includes('youtube.com/watch?v=')) {
-    videoId = url.split('v=')[1].split('&')[0];
-  } else if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1].split('?')[0];
-  } else if (url.includes('youtube.com/embed/')) {
-    videoId = url.split('embed/')[1].split('?')[0];
-  }
-
-  if (videoId) {
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
-  }
-
-  // Handle Google Drive
-  if (url.includes('drive.google.com')) {
-    let driveId = '';
-    if (url.includes('/file/d/')) {
-      driveId = url.split('/file/d/')[1].split('/')[0];
-    } else if (url.includes('id=')) {
-      driveId = url.split('id=')[1].split('&')[0];
-    }
-    
-    if (driveId) {
-      return `https://drive.google.com/file/d/${driveId}/preview`;
-    }
-  }
-
-  return url;
-};
-
-const getYouTubeId = (url: string) => {
-  if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  const id = (match && match[2].length === 11) ? match[2] : null;
-  if (id) return id;
-  
-  // Try backup regex
-  const backupMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-  return backupMatch ? backupMatch[1] : null;
-};
-
-const VideoPlayer: React.FC<{ 
-  url: string, 
-  playerType?: 'iframe' | 'plyr', 
-  className?: string,
-  autoPlay?: boolean,
-  onLoad?: () => void 
-}> = ({ url, playerType = 'iframe', className = "", autoPlay = false, onLoad }) => {
-  const youtubeId = getYouTubeId(url);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Ensure onLoad is called even if Plyr is flaky
-  useEffect(() => {
-    if (playerType === 'plyr' && youtubeId) {
-      const timer = setTimeout(() => {
-        if (onLoad) onLoad();
-      }, 2000); // 2 second timeout as fallback
-      return () => clearTimeout(timer);
-    }
-  }, [playerType, youtubeId, onLoad]);
-
-  if (playerType === 'plyr' && youtubeId) {
-    return (
-      <div className={`${className} bg-black`} ref={containerRef}>
-        <Plyr
-          source={{
-            type: 'video',
-            sources: [
-              {
-                src: youtubeId,
-                provider: 'youtube',
-              },
-            ],
-          }}
-          options={{
-            autoplay: autoPlay,
-            muted: autoPlay,
-            hideControls: autoPlay,
-            clickToPlay: !autoPlay,
-            playsinline: true,
-            loop: { active: autoPlay },
-            fullscreen: { enabled: !autoPlay, fallback: true, iosNative: true },
-            youtube: {
-              noCookie: true,
-              rel: 0,
-              showinfo: 0,
-              iv_load_policy: 3,
-              modestbranding: 1
-            }
-          }}
-          onReady={onLoad}
-          onEnterFullscreen={() => console.log('Fullscreen')}
-        />
-      </div>
-    );
-  }
-
-  // Fallback to Iframe
-  return (
-    <iframe
-      src={`${getEmbedUrl(url)}${getEmbedUrl(url).includes('?') ? '&' : '?'}autoplay=${autoPlay ? 1 : 0}&mute=${autoPlay ? 1 : 0}`}
-      className={className}
-      allow="autoplay; encrypted-media"
-      allowFullScreen
-      onLoad={onLoad}
-    />
-  );
-};
+const sharedTransition = {
+  type: "spring",
+  stiffness: 260,
+  damping: 32,
+  mass: 1
+} as any;
 
 const AdminSidebar: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-red-500' },
     { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
+    { id: 'drive', label: 'Google Drive', icon: HardDrive, color: 'text-emerald-500' },
     { id: 'feedback', label: 'Feedback', icon: Users, color: 'text-emerald-500' },
     { id: 'logs', label: 'Audit Logs', icon: Activity, color: 'text-amber-500' },
     { id: 'ads', label: 'Ads Manager', icon: Link, color: 'text-orange-500' },
@@ -278,7 +172,7 @@ const Dashboard: React.FC<{
   onView: (id: string) => void,
   onShowDetails: (m: Movie, layoutId: string) => void,
   searchQuery: string,
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs') => void,
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
   loadingActions?: Record<string, boolean>
 }> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab, loadingActions = {} }) => {
   const stats = useMemo(() => {
@@ -521,17 +415,16 @@ const Dashboard: React.FC<{
 };
 
 const AdminMobileNav: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Stats', icon: BarChart3 },
     { id: 'movies', label: 'Movies', icon: Film },
-    { id: 'feedback', label: 'Feedback', icon: Users },
-    { id: 'logs', label: 'Logs', icon: Activity },
-    { id: 'ads', label: 'Ads', icon: Link },
+    { id: 'drive', label: 'Cloud', icon: HardDrive },
+    { id: 'feedback', label: 'Feed', icon: Users },
     { id: 'settings', label: 'Cfg', icon: Settings },
   ] as const;
 
@@ -587,8 +480,7 @@ const INITIAL_MOVIES: Movie[] = [
     description: 'Download now',
     category: 'Action',
     downloads: 0,
-    views: 0,
-    player_type: 'plyr'
+    views: 0
   }
 ];
 
@@ -765,8 +657,8 @@ const Navbar: React.FC<{
   setIsSearchActive: (active: boolean) => void,
   movies: Movie[],
   onDMCAClick: () => void,
-  adminView: 'all' | 'featured',
-  setAdminView: (view: 'all' | 'featured') => void,
+  adminView?: any,
+  setAdminView?: (view: any) => void,
   setActiveCategory: (cat: string) => void
 }> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView, setActiveCategory }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -1122,8 +1014,54 @@ export default function App() {
     setActiveCategory(category);
   };
 
-  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads'>('dashboard');
+  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive'>('dashboard');
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [isDriveLoading, setIsDriveLoading] = useState(false);
+
+  useEffect(() => {
+    initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        // @ts-ignore
+        window.googleAccessToken = token;
+      },
+      () => {
+        setGoogleUser(null);
+        // @ts-ignore
+        window.googleAccessToken = null;
+      }
+    );
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        // @ts-ignore
+        window.googleAccessToken = result.accessToken;
+        toast.success(`Connected as ${result.user.displayName}`);
+      }
+    } catch (err) {
+      toast.error("Cloud Connection Failed");
+    }
+  };
+
+  const handleDriveImport = (file: any) => {
+    setFormData({
+      ...INITIAL_FORM_DATA,
+      title: file.name.split('.').slice(0, -1).join('.') || file.name,
+      url: file.webViewLink,
+      viewUrl: file.webContentLink || file.webViewLink,
+      description: `Imported from Google Drive. Size: ${file.size ? (parseInt(file.size) / (1024 * 1024)).toFixed(1) : '?'} MB`,
+      posterUrl: file.thumbnailLink ? file.thumbnailLink.replace('=s220', '=s800') : '',
+    });
+    setAdminView('movies');
+    setShowAddEditModal(true);
+    toast.info("Prefilled movie details from Google Drive");
+  };
+
   const [seoSettings, setSeoSettings] = useState({
     title: 'Movie Wallah - Download any movie Here',
     description: 'Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.',
@@ -1141,10 +1079,9 @@ export default function App() {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
-  const INITIAL_FORM_DATA = {
+const INITIAL_FORM_DATA = {
     title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
-    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: '',
-    player_type: 'iframe' as 'iframe' | 'plyr'
+    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: ''
   };
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
@@ -1596,8 +1533,7 @@ export default function App() {
       downloads: movie.downloads || 0,
       views: movie.views || 0,
       auto_play_video: movie.auto_play_video || false,
-      auto_play_video_url: movie.auto_play_video_url || '',
-      player_type: movie.player_type || 'iframe'
+      auto_play_video_url: movie.auto_play_video_url || ''
     });
     setShowAddEditModal(true);
   };
@@ -1744,15 +1680,6 @@ export default function App() {
             gap: '16px',
             minWidth: '320px',
           },
-          success: {
-            icon: <MeshOrb />,
-          },
-          error: {
-            icon: <MeshOrb />,
-          },
-          loading: {
-            icon: <MeshOrb />,
-          },
           className: "fluid-mesh-toast",
         }}
       />
@@ -1843,6 +1770,15 @@ export default function App() {
                         onBulkDelete={handleBulkDelete}
                         loadingActions={loadingActions}
                       />
+                    )}
+                    {adminView === 'drive' && (
+                      <div className="px-6 md:px-16 pt-12 pb-20">
+                        <DriveBrowser 
+                          onImport={handleDriveImport} 
+                          onLogin={handleGoogleSignIn}
+                          accessToken={googleUser ? (window as any).googleAccessToken : null}
+                        />
+                      </div>
                     )}
                     {adminView === 'feedback' && (
                       <div className="px-6 md:px-16 pt-12 pb-20">
@@ -2344,26 +2280,6 @@ export default function App() {
                         <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Dedicated Auto-play Video URL (Optional)</label>
                         <input type="url" value={formData.auto_play_video_url} onChange={(e) => setFormData({...formData, auto_play_video_url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="YouTube or Google Drive link..." />
                       </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Player Style *</label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <button 
-                            type="button"
-                            onClick={() => setFormData({...formData, player_type: 'iframe'})}
-                            className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all ${formData.player_type === 'iframe' ? 'bg-white text-black border-white' : 'bg-black/40 text-white/40 border-white/5 hover:border-white/20'}`}
-                          >
-                            Standard Iframe (Faster)
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => setFormData({...formData, player_type: 'plyr'})}
-                            className={`px-4 py-3 rounded-xl border text-sm font-bold transition-all ${formData.player_type === 'plyr' ? 'bg-white text-black border-white' : 'bg-black/40 text-white/40 border-white/5 hover:border-white/20'}`}
-                          >
-                            Minimal Plyr (Netflix Look)
-                          </button>
-                        </div>
-                        <p className="mt-2 text-[10px] text-white/30 italic">Note: Plyr works best with YouTube. Drive files will fallback to Iframe if they are over 100MB.</p>
-                      </div>
                     </div>
                   </div>
 
@@ -2443,16 +2359,6 @@ export default function App() {
                         <div>
                           <p className="text-sm font-bold text-current">Show in Trending Section</p>
                           <p className="text-[10px] text-white/40 uppercase tracking-wider">Featured on trending row</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 group cursor-pointer hover:bg-white/10 transition-all" onClick={() => setFormData({...formData, auto_play_video: !formData.auto_play_video})}>
-                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.auto_play_video ? 'bg-red-600 border-red-600' : 'border-white/20'}`}>
-                          {formData.auto_play_video && <Plus size={16} className="text-white rotate-45" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-current">Auto-play Video</p>
-                          <p className="text-[10px] text-white/40 uppercase tracking-wider">Auto-play trailer in details modal</p>
                         </div>
                       </div>
                     </div>
@@ -3181,13 +3087,6 @@ const MovieSkeleton: React.FC = () => (
   </div>
 );
 
-const sharedTransition = {
-  type: "spring",
-  stiffness: 260,
-  damping: 32,
-  mass: 1
-};
-
 const MovieCard: React.FC<{ 
   movie: Movie, 
   isAdmin: boolean, 
@@ -3283,43 +3182,8 @@ const MovieDetailModal: React.FC<{
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [isTrailerLoading, setIsTrailerLoading] = useState(true);
-  const [isHeroVideoLoading, setIsHeroVideoLoading] = useState(true);
   
   const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Check if message is from YouTube
-      if (event.origin.includes('youtube.com')) {
-        try {
-          const data = JSON.parse(event.data);
-          // YouTube state 0 means "ended"
-          if (data.event === 'infoDelivery' && data.info && data.info.playerState === 0) {
-            setShowVideo(false);
-          }
-        } catch (e) {
-          // Not a JSON message or not from YouTube API
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  useEffect(() => {
-    setShowVideo(false);
-    setIsTrailerLoading(true);
-    setIsHeroVideoLoading(true);
-    if (movie.auto_play_video && (movie.auto_play_video_url || movie.trailerUrl)) {
-      const timer = setTimeout(() => {
-        setShowVideo(true);
-      }, 1700);
-      return () => clearTimeout(timer);
-    }
-  }, [movie.id, movie.auto_play_video, movie.auto_play_video_url, movie.trailerUrl]);
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
@@ -3467,7 +3331,7 @@ const MovieDetailModal: React.FC<{
 
             {/* Hero Section */}
             <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
-              {/* Poster Background (Layered for Zero Blanking) */}
+              {/* Poster Background */}
               <motion.div 
                 layoutId={finalLayoutId}
                 transition={sharedTransition}
@@ -3480,19 +3344,6 @@ const MovieDetailModal: React.FC<{
                   priority={true} 
                   className="absolute inset-0 h-full w-full object-cover opacity-80" 
                 />
-
-                {/* Overlaid Video (Fades in when loaded) */}
-                {showVideo && (movie.auto_play_video_url || movie.trailerUrl) && (
-                  <div className="absolute inset-0 w-full h-full">
-                    <VideoPlayer
-                      url={movie.auto_play_video_url || movie.trailerUrl || ''}
-                      playerType={movie.player_type}
-                      autoPlay={true}
-                      className={`h-full w-full transition-opacity duration-1000 ${isHeroVideoLoading ? 'opacity-0' : 'opacity-100'}`}
-                      onLoad={() => setIsHeroVideoLoading(false)}
-                    />
-                  </div>
-                )}
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/40 to-transparent" />
               </motion.div>
@@ -3610,38 +3461,42 @@ const MovieDetailModal: React.FC<{
             </div>
           </div>
 
-          {/* Trailer Section - Netflix Style */}
+          {/* Trailer Section */}
           {movie.trailerUrl && (
             <div id="trailer-section" className="space-y-6 pt-4">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white/90">Trailers & More</h3>
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900/50 border border-white/10 group/trailer">
-                {/* Zero Blanking: Show poster while trailer is loading */}
+              <div id="trailer-container" className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900/50 border border-white/10 group/trailer">
                 <MoviePoster 
                   src={movie.posterUrl} 
-                  alt="" 
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${isTrailerLoading ? 'opacity-40' : 'opacity-0'}`} 
+                  alt={movie.title} 
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover/trailer:scale-105 transition-transform duration-700" 
                 />
-                
-                {isTrailerLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20 backdrop-blur-sm">
-                    <Spinner size={32} className="text-white/30" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 group-hover/trailer:bg-black/40 transition-colors">
+                  <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover/trailer:scale-110 transition-transform shadow-2xl">
+                    <Play size={40} className="fill-current ml-1" />
                   </div>
-                )}
-                <VideoPlayer 
-                  url={movie.trailerUrl || ''}
-                  playerType={movie.player_type}
-                  className={`absolute top-0 left-0 w-full h-full transition-opacity duration-1000 ${isTrailerLoading ? 'opacity-0' : 'opacity-100'}`}
-                  onLoad={() => setIsTrailerLoading(false)}
+                  <p className="mt-4 text-sm font-black uppercase tracking-[0.2em] text-white/70">Click to watch trailer externally</p>
+                </div>
+                
+                <a 
+                  href={movie.trailerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute inset-0 z-10"
+                  onClick={() => onView(movie.id)}
                 />
               </div>
-              <a 
-                href={movie.trailerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg font-bold text-sm transition-all border border-white/5"
-              >
-                <Maximize size={16} /> Open in Fullscreen
-              </a>
+              <div className="grid grid-cols-1 gap-3">
+                <a 
+                  href={movie.trailerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onView(movie.id)}
+                  className="flex items-center justify-center gap-2 bg-white text-black py-4 rounded-lg font-black text-sm transition-all hover:bg-white/90 active:scale-95 shadow-xl"
+                >
+                  <ExternalLink size={20} /> Watch Trailer on YouTube / External Site
+                </a>
+              </div>
             </div>
           )}
 
