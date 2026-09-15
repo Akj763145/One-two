@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *), :is(.dark)&);
 
 @theme {
-  --font-sans: "Playfair Display", serif;
-  --font-display: "Playfair Display", serif;
-  --font-serif: "Playfair Display", serif;
+  --font-sans: "Bakbak One", system-ui, sans-serif;
+  --font-display: "Bakbak One", system-ui, sans-serif;
+  --font-serif: "Bakbak One", system-ui, sans-serif;
   
   --color-midnight: #050505;
   --color-surface: #0A0A0A;
