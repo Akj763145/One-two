@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive } from 'lucide-react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive, Lock } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { initAuth, googleSignIn, getAccessToken, logoutGoogle } from './lib/firebaseAuth';
-import { DriveBrowser } from './components/DriveBrowser';
+const DriveBrowser = React.lazy(() => import('./components/DriveBrowser').then(m => ({ default: m.DriveBrowser })));
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -170,7 +171,7 @@ const Dashboard: React.FC<{
   onDelete: (id: string) => void,
   onDownload: (id: string) => void,
   onView: (id: string) => void,
-  onShowDetails: (m: Movie, layoutId: string) => void,
+  onShowDetails: (m: Movie) => void,
   searchQuery: string,
   setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
   loadingActions?: Record<string, boolean>
@@ -359,11 +360,10 @@ const Dashboard: React.FC<{
             {recentMovies.map(movie => (
               <div 
                 key={movie.id} 
-                onClick={() => onShowDetails(movie, `movie-poster-${movie.id}-dash`)}
+                onClick={() => onShowDetails(movie)}
                 className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
               >
                 <motion.div 
-                  layoutId={`movie-poster-${movie.id}-dash`} 
                   transition={sharedTransition}
                   className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0"
                 >
@@ -648,7 +648,6 @@ const Logo: React.FC<{ className?: string, showText?: boolean }> = ({ className 
 
 const Navbar: React.FC<{ 
   isAdmin: boolean, 
-  onAdminClick: () => void, 
   onLogout: () => void,
   searchQuery: string,
   setSearchQuery: (q: string) => void,
@@ -660,7 +659,7 @@ const Navbar: React.FC<{
   adminView?: any,
   setAdminView?: (view: any) => void,
   setActiveCategory: (cat: string) => void
-}> = ({ isAdmin, onAdminClick, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView, setActiveCategory }) => {
+}> = ({ isAdmin, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView, setActiveCategory }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -848,17 +847,6 @@ const Navbar: React.FC<{
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     className="absolute right-0 mt-3 w-56 glass-panel rounded-2xl p-2 shadow-2xl overflow-hidden"
                   >
-                    {!isAdmin && (
-                      <>
-                        <div className="px-4 py-2 text-[10px] font-bold text-current opacity-30 uppercase tracking-widest">Account</div>
-                        <button 
-                          onClick={() => { onAdminClick(); setShowMenu(false); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium"
-                        >
-                          <Shield size={18} /> Admin Login
-                        </button>
-                      </>
-                    )}
                     <div className="h-px bg-white/10 my-1" />
                     <button 
                       onClick={() => { onDMCAClick(); setShowMenu(false); }}
@@ -975,7 +963,7 @@ const AdsManager: React.FC<{
   );
 };
 
-export default function App() {
+const MainApp = () => {
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
@@ -990,10 +978,32 @@ export default function App() {
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(localStorage.getItem('movieWallah_admin') === 'true');
+        }
+      } else {
+        setIsAdmin(localStorage.getItem('movieWallah_admin') === 'true');
+      }
+    };
+    checkAdmin();
+  }, []);
   
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
@@ -1004,6 +1014,24 @@ export default function App() {
   const hasHandledInitialUrl = useRef(false);
   const [showDMCA, setShowDMCA] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [visibleCount, setVisibleCount] = useState(24);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [debouncedSearchQuery, activeCategory]);
+
+  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    if (observer.current) observer.current.disconnect();
+    if (node) {
+      observer.current = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => prev + 24);
+        }
+      }, { rootMargin: '400px' });
+      observer.current.observe(node);
+    }
+  }, []);
 
   const handleSetActiveCategory = (category: string) => {
     if (category === 'All' && activeCategory !== 'All') {
@@ -1403,12 +1431,12 @@ const INITIAL_FORM_DATA = {
 
   // Also lock scroll for other modals
   useEffect(() => {
-    if (showAddEditModal || showDMCA || showAdminLogin || movieToDelete) {
+    if (showAddEditModal || showDMCA || movieToDelete) {
       document.body.style.overflow = 'hidden';
     } else if (!selectedMovieForDetails) {
       document.body.style.overflow = 'unset';
     }
-  }, [showAddEditModal, showDMCA, showAdminLogin, movieToDelete, selectedMovieForDetails]);
+  }, [showAddEditModal, showDMCA, movieToDelete, selectedMovieForDetails]);
 
   const fetchMovies = async () => {
     if (!supabase) {
@@ -1448,22 +1476,8 @@ const INITIAL_FORM_DATA = {
     }
   };
 
-  const handleShowDetails = (movie: Movie, layoutId: string) => {
+  const handleShowDetails = (movie: Movie) => {
     setSelectedMovieForDetails(movie);
-    setActiveLayoutId(layoutId);
-  };
-
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    const expectedPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'xxx';
-    if (adminPassword === expectedPassword) {
-      setIsAdmin(true);
-      setShowAdminLogin(false);
-      setAdminPassword('');
-    } else {
-      setErrorMsg('Incorrect password');
-    }
   };
 
   const handleSaveMovie = async (e: React.FormEvent) => {
@@ -1638,7 +1652,7 @@ const INITIAL_FORM_DATA = {
   };
 
   const filteredMovies = React.useMemo(() => {
-    const query = deferredSearchQuery.toLowerCase().trim();
+    const query = debouncedSearchQuery.toLowerCase().trim();
     if (!query && activeCategory === 'All') return movies;
 
     return movies.filter(m => {
@@ -1650,9 +1664,9 @@ const INITIAL_FORM_DATA = {
       const matchesCategory = activeCategory === 'All' || m.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [movies, deferredSearchQuery, activeCategory]);
+  }, [movies, debouncedSearchQuery, activeCategory]);
 
-  const currentMovies = filteredMovies;
+  const currentMovies = filteredMovies.slice(0, visibleCount);
 
   const heroMovies = movies.filter(m => m.is_hero);
   const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
@@ -1694,7 +1708,6 @@ const INITIAL_FORM_DATA = {
       {!isAdmin && (
         <Navbar 
           isAdmin={isAdmin} 
-          onAdminClick={() => setShowAdminLogin(true)} 
           onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -1928,7 +1941,6 @@ const INITIAL_FORM_DATA = {
                   {featuredMovies.map((movie, index) => (
                     <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
                       <motion.div 
-                        layoutId={`movie-poster-${movie.id}-hero`}
                         transition={sharedTransition}
                         className="absolute inset-0"
                       >
@@ -1953,7 +1965,7 @@ const INITIAL_FORM_DATA = {
                             <button 
                               onClick={() => {
                                 if (movie.trailerUrl) {
-                                  handleShowDetails(movie, `movie-poster-${movie.id}-hero`);
+                                  handleShowDetails(movie);
                                   handleView(movie.id);
                                   setTimeout(() => {
                                     document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -1969,7 +1981,7 @@ const INITIAL_FORM_DATA = {
                             </button>
                           )}
                           <button 
-                            onClick={() => handleShowDetails(movie, `movie-poster-${movie.id}-hero`)}
+                            onClick={() => handleShowDetails(movie)}
                             className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-white/20 transition-all duration-300 transform hover:scale-105 active:scale-95"
                           >
                             <Info size={18} /> More Info
@@ -2037,19 +2049,26 @@ const INITIAL_FORM_DATA = {
                   <div className="flex flex-col gap-8">
                     <div className="flex-1">
                       {currentMovies.length > 0 ? (
-                        <div className="flex flex-col gap-12">
-                          <div 
-                            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
-                          >
-                            {isLoading ? (
-                              Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
-                            ) : (
-                              currentMovies.map(movie => (
-                                <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-search`} loadingActions={loadingActions} />
-                              ))
-                            )}
+                        <>
+                          <div className="flex flex-col gap-12">
+                            <div 
+                              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                            >
+                              {isLoading ? (
+                                Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
+                              ) : (
+                                currentMovies.map(movie => (
+                          <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
+                                ))
+                              )}
+                            </div>
                           </div>
-                        </div>
+                          {visibleCount < filteredMovies.length && (
+                            <div ref={loadMoreRef} className="w-full h-24 flex items-center justify-center mt-8">
+                              <Loader size={32} className="text-white/30 animate-spin" />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
                           <Search size={48} className="mx-auto mb-4 text-white/20" />
@@ -2089,7 +2108,7 @@ const INITIAL_FORM_DATA = {
                       >
                         {trendingMovies.map((movie) => (
                           <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
-                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-trending`} loadingActions={loadingActions} />
+                            <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                           </SwiperSlide>
                         ))}
                       </Swiper>
@@ -2117,7 +2136,7 @@ const INITIAL_FORM_DATA = {
                           ) : (
                             currentMovies.map((movie, index) => (
                               <React.Fragment key={movie.id}>
-                                <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} layoutId={`movie-poster-${movie.id}-grid`} loadingActions={loadingActions} />
+                                <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                                 {(index + 1) % 10 === 0 && index !== currentMovies.length - 1 && adSettings.enabled && adSettings.homeGridInline && (
                                   <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 w-full my-2 flex justify-center">
                                     <AdBanner code={adSettings.homeGridInline} />
@@ -2127,6 +2146,11 @@ const INITIAL_FORM_DATA = {
                             ))
                           )}
                         </div>
+                        {visibleCount < filteredMovies.length && (
+                          <div ref={loadMoreRef} className="w-full h-24 flex items-center justify-center mt-8">
+                            <Loader size={32} className="text-white/30 animate-spin" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2173,23 +2197,6 @@ const INITIAL_FORM_DATA = {
 <AnimatePresence>
         {showDMCA && (
           <DMCAModal key="dmca-modal" onClose={() => setShowDMCA(false)} />
-        )}
-        {showAdminLogin && (
-          <motion.div key="admin-login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="w-full max-w-sm glass-panel rounded-3xl p-8 relative bg-white/10">
-              <button onClick={() => setShowAdminLogin(false)} className="absolute top-4 right-4 text-current opacity-50 hover:opacity-100 bg-current/10 rounded-full p-1 transition-colors"><X size={20} /></button>
-              <div className="flex justify-center mb-6"><div className="w-16 h-16 rounded-full bg-current/10 flex items-center justify-center"><Shield size={32} className="text-current" /></div></div>
-              <h3 className="text-2xl font-bold text-center mb-2">Admin Access</h3>
-              <p className="text-current opacity-50 text-center text-sm mb-6">Enter your password to manage movies.</p>
-              <form onSubmit={handleAdminLogin}>
-                <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Password" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-current placeholder-current/30 focus:outline-none focus:ring-2 focus:ring-current/50 transition-all mb-4" autoFocus />
-                {errorMsg && <p className="text-red-400 text-xs mb-4 text-center">{errorMsg}</p>}
-                <button type="submit" disabled={isActionLoading} className="w-full bg-white text-black font-bold rounded-xl py-3 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                  {isActionLoading ? <Spinner size={18} /> : 'Unlock'}
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
         )}
 
         {showAddEditModal && (
@@ -2378,11 +2385,10 @@ const INITIAL_FORM_DATA = {
 
         <AnimatePresence>
           {selectedMovieForDetails && (
-            <MovieDetailModal 
+              <MovieDetailModal 
               key={selectedMovieForDetails.id} 
               movie={selectedMovieForDetails} 
               allMovies={movies}
-              layoutId={activeLayoutId || `movie-poster-${selectedMovieForDetails.id}`}
               onClose={() => {
                 if (window.history.state?.modal === 'movie-details') {
                   window.history.back();
@@ -2451,7 +2457,7 @@ const MovieManagement: React.FC<{
   onDelete: (id: string) => void,
   onDownload: (id: string) => void,
   onView: (id: string) => void,
-  onShowDetails: (m: Movie, layoutId: string) => void,
+  onShowDetails: (m: Movie) => void,
   searchQuery: string,
   onBulkUpdate: (ids: string[], updates: Partial<Movie>) => Promise<void>,
   onBulkDelete: (ids: string[]) => Promise<void>,
@@ -2620,7 +2626,6 @@ const MovieManagement: React.FC<{
               searchQuery={searchQuery} 
               isSelected={selectedIds.includes(movie.id)}
               onSelect={toggleSelect}
-              layoutId={`movie-poster-${movie.id}-mgmt`}
               loadingActions={loadingActions}
             />
           ))}
@@ -3094,18 +3099,13 @@ const MovieCard: React.FC<{
   onDelete: (id: string) => void, 
   onDownload: (id: string) => void, 
   onView: (id: string) => void, 
-  onShowDetails: (m: Movie, layoutId: string) => void,
+  onShowDetails: (m: Movie) => void,
   searchQuery?: string,
   isSelected?: boolean,
   onSelect?: (id: string) => void,
-  layoutId?: string,
   loadingActions?: Record<string, boolean>
-}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect, layoutId, loadingActions = {} }) => {
+}> = React.memo(({ movie, isAdmin, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery = '', isSelected, onSelect, loadingActions = {} }) => {
   const query = searchQuery.toLowerCase().trim();
-  const matchesCast = query && movie.cast?.toLowerCase().includes(query);
-  const matchesDirector = query && movie.director?.toLowerCase().includes(query);
-  
-  const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
 
   return (
     <div
@@ -3124,9 +3124,8 @@ const MovieCard: React.FC<{
       )}
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
         <motion.div 
-          layoutId={finalLayoutId}
           transition={sharedTransition}
-          onClick={() => onShowDetails(movie, finalLayoutId)}
+          onClick={() => onShowDetails(movie)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
           <MoviePoster src={movie.posterUrl} alt={movie.title} className="group-hover:scale-105 transition-transform duration-500" />
@@ -3172,9 +3171,8 @@ const MovieDetailModal: React.FC<{
   onDownload: (id: string) => void;
   onView: (id: string) => void;
   adSettings: AdSettings;
-  layoutId?: string;
   loadingActions?: Record<string, boolean>;
-}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, adSettings, layoutId, loadingActions = {} }) => {
+}> = ({ movie, allMovies, onClose, onMovieClick, onDownload, onView, adSettings, loadingActions = {} }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -3183,8 +3181,6 @@ const MovieDetailModal: React.FC<{
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
   
-  const finalLayoutId = layoutId || `movie-poster-${movie.id}`;
-
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
     if (navigator.share) {
@@ -3333,7 +3329,6 @@ const MovieDetailModal: React.FC<{
             <div className="relative min-h-[450px] md:aspect-video shrink-0 group flex flex-col justify-end">
               {/* Poster Background */}
               <motion.div 
-                layoutId={finalLayoutId}
                 transition={sharedTransition}
                 className="absolute inset-0 overflow-hidden"
               >
@@ -3523,7 +3518,6 @@ const MovieDetailModal: React.FC<{
                   >
                     <div className="aspect-[2/3] relative overflow-hidden">
                       <motion.div 
-                        layoutId={`movie-poster-${m.id}-similar`} 
                         transition={sharedTransition}
                         className="w-full h-full"
                       >
@@ -3717,3 +3711,17 @@ const DMCAModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     </motion.div>
   );
 };
+
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
+
+export default function App() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <Routes>
+        <Route path="/" element={<MainApp />} />
+        <Route path="/adminlogin" element={<AdminLogin />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </React.Suspense>
+  );
+}

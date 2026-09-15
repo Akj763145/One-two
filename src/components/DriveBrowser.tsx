@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HardDrive, Search, Loader, Plus, AlertCircle, ExternalLink, Play, CheckCircle2, ChevronRight, Globe, Lock } from 'lucide-react';
+import { HardDrive, Search, Loader, Plus, AlertCircle, ExternalLink, Play, CheckCircle2, ChevronRight, Globe, Lock, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -25,6 +25,8 @@ export const DriveBrowser: React.FC<DriveBrowserProps> = ({ onImport, onLogin, a
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const [selectedFile, setSelectedFile] = useState<DriveFile | null>(null);
 
   const fetchFiles = async (token: string) => {
     setLoading(true);
@@ -151,7 +153,8 @@ export const DriveBrowser: React.FC<DriveBrowserProps> = ({ onImport, onLogin, a
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 key={file.id} 
-                className="group relative bg-zinc-900 border border-white/5 rounded-3xl overflow-hidden hover:border-red-600/30 transition-all shadow-xl"
+                onClick={() => setSelectedFile(file)}
+                className="group relative bg-zinc-900 border border-white/5 rounded-3xl overflow-hidden hover:border-red-600/30 transition-all shadow-xl cursor-pointer"
               >
                 <div className="aspect-video relative overflow-hidden bg-black">
                   {file.thumbnailLink ? (
@@ -195,6 +198,50 @@ export const DriveBrowser: React.FC<DriveBrowserProps> = ({ onImport, onLogin, a
               </motion.div>
             ))}
           </AnimatePresence>
+        </div>
+      )}
+
+      {selectedFile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedFile(null)} />
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-zinc-900 w-full max-w-2xl rounded-3xl border border-white/10 p-2 shadow-2xl overflow-hidden">
+            <div className="aspect-video bg-black rounded-2xl overflow-hidden relative">
+              {selectedFile.thumbnailLink ? (
+                <img src={selectedFile.thumbnailLink.replace('=s220', '=s1600')} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/10">
+                  <Play size={64} />
+                </div>
+              )}
+              <button onClick={() => setSelectedFile(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-md transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <h3 className="text-xl font-black mb-2">{selectedFile.name}</h3>
+              <div className="grid grid-cols-2 gap-4 text-xs text-white/50 mb-8 mt-4 font-mono">
+                <p>Mime: {selectedFile.mimeType}</p>
+                <p>Size: {formatSize(selectedFile.size)}</p>
+                <p className="col-span-2">Created: {new Date(selectedFile.createdTime).toLocaleString()}</p>
+              </div>
+              <div className="flex gap-4">
+                 <button 
+                  onClick={() => { onImport(selectedFile); setSelectedFile(null); }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} /> Import
+                </button>
+                <a 
+                  href={selectedFile.webViewLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-4 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 font-black text-xs uppercase tracking-widest flex items-center gap-2"
+                >
+                  <ExternalLink size={16} /> Open in Drive
+                </a>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

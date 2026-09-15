@@ -36,6 +36,18 @@ async function startServer() {
     }
   });
 
+  // API Route for fallback admin login
+  app.post("/api/admin/login", (req, res) => {
+    const { email, password } = req.body;
+    const expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    
+    if (email === 'admin@moviewallah.com' && password === expectedPassword) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Invalid email or password" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
