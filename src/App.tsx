@@ -1016,6 +1016,38 @@ const MainApp = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [visibleCount, setVisibleCount] = useState(24);
   const observer = useRef<IntersectionObserver | null>(null);
+  
+  const [pullStartPoint, setPullStartPoint] = useState(0);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      setPullStartPoint(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartPoint === 0) return;
+    const y = e.touches[0].clientY;
+    const distance = y - pullStartPoint;
+    if (window.scrollY === 0 && distance > 0) {
+      // Add resistance
+      setPullDistance(Math.min(distance * 0.4, 100));
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60) {
+      setIsRefreshing(true);
+      await fetchMovies();
+      setIsRefreshing(false);
+    }
+    setPullStartPoint(0);
+    setPullDistance(0);
+  };
 
   useEffect(() => {
     setVisibleCount(24);
@@ -1897,7 +1929,26 @@ const INITIAL_FORM_DATA = {
         </div>
       ) : (
         <>
-          <main className="pt-20 md:pt-24 pb-24">
+          <main 
+            className="pt-20 md:pt-24 pb-24 relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ transform: `translateY(${pullDistance}px)`, transition: pullDistance === 0 ? 'transform 0.3s ease-out' : 'none' }}
+          >
+            {/* Pull to refresh indicator */}
+            <div 
+              className="absolute left-0 right-0 flex justify-center z-50 pointer-events-none transition-opacity duration-200"
+              style={{ 
+                top: '20px', 
+                opacity: pullDistance > 10 || isRefreshing ? 1 : 0,
+                transform: `translateY(${Math.min(pullDistance - 40, 0)}px)` 
+              }}
+            >
+              <div className="bg-zinc-900/90 backdrop-blur-md rounded-full p-2 border border-white/10 shadow-xl flex items-center justify-center">
+                <Loader size={24} className={`text-red-500 ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }} />
+              </div>
+            </div>
             {isLoading ? (
               <div className="h-screen flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1914,9 +1965,9 @@ const INITIAL_FORM_DATA = {
                   centeredSlides={true}
                   slidesPerView={'auto'}
                   loop={true}
-                  speed={1500}
+                  speed={700}
                   autoplay={{
-                    delay: 2000,
+                    delay: 4000,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: true,
                   }}
@@ -1939,13 +1990,10 @@ const INITIAL_FORM_DATA = {
                   className="hero-swiper w-full h-full !px-4 md:!px-20"
                 >
                   {featuredMovies.map((movie, index) => (
-                    <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group">
-                      <motion.div 
-                        transition={sharedTransition}
-                        className="absolute inset-0"
-                      >
+                    <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group transform-gpu">
+                      <div className="absolute inset-0">
                         <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img h-full w-full object-cover" priority={index === 0} />
-                      </motion.div>
+                      </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
                       
                       <motion.div 
@@ -3040,21 +3088,15 @@ const MoviePoster: React.FC<{
   contain?: boolean; 
   priority?: boolean;
 }> = ({ src, alt, className = "", contain = false, priority = false }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Reset states when src changes
+  // Reset error state when src changes
   useEffect(() => {
-    setIsLoaded(false);
     setHasError(false);
   }, [src]);
 
   return (
-    <div className={`relative w-full bg-zinc-900 overflow-hidden ${className.includes('aspect-') ? '' : 'aspect-[2/3]'} ${className}`}>
-      {(!isLoaded && !hasError) && (
-        <div className="absolute inset-0 shimmer z-10" />
-      )}
-      
+    <div className={`relative w-full bg-zinc-900 overflow-hidden shimmer ${className.includes('aspect-') ? '' : 'aspect-[2/3]'} ${className}`}>
       {(hasError || !src) ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-white/20 p-4 text-center z-10">
           <Film size={40} className="mb-2 opacity-20" />
@@ -3064,9 +3106,8 @@ const MoviePoster: React.FC<{
         <img 
           src={src} 
           alt={alt} 
-          onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          className={`w-full h-full ${contain ? 'object-contain' : 'object-cover'} transition-opacity duration-300 ${priority || isLoaded ? 'opacity-100' : 'opacity-0'}`} 
+          className={`w-full h-full relative z-10 ${contain ? 'object-contain' : 'object-cover'}`} 
           referrerPolicy="no-referrer"
           loading={priority ? "eager" : "lazy"}
           // @ts-ignore
@@ -3110,6 +3151,7 @@ const MovieCard: React.FC<{
   return (
     <div
       className={`flex flex-col gap-3 group w-full transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] relative ${isSelected ? 'scale-[0.98]' : ''}`}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 320px' }}
     >
       {isAdmin && onSelect && (
         <div 
@@ -3123,8 +3165,7 @@ const MovieCard: React.FC<{
         </div>
       )}
       <div className={`rounded-2xl bg-zinc-900 overflow-hidden shadow-lg border-2 transition-colors ${isSelected ? 'border-red-600' : 'border-transparent'}`}>
-        <motion.div 
-          transition={sharedTransition}
+        <div 
           onClick={() => onShowDetails(movie)}
           className="relative rounded-2xl overflow-hidden w-full bg-black cursor-pointer aspect-[2/3]"
         >
@@ -3141,7 +3182,7 @@ const MovieCard: React.FC<{
               </span>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {isAdmin && (
