@@ -1,22 +1,18 @@
+  // Body scroll lock logic is handled lower down
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive, Lock } from 'lucide-react';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Search, Mail, AlertTriangle, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive, Lock } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
+import { TmdbImporter } from './components/TmdbImporter';
 import { initAuth, googleSignIn, getAccessToken, logoutGoogle } from './lib/firebaseAuth';
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const AdminMobileNav = React.lazy(() => import('./components/AdminMobileNav').then(m => ({ default: m.AdminMobileNav })));
 const DriveBrowser = React.lazy(() => import('./components/DriveBrowser').then(m => ({ default: m.DriveBrowser })));
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip 
-} from 'recharts';
+
 import 'swiper/css';
 import 'swiper/css/free-mode';
 import 'swiper/css/effect-coverflow';
@@ -106,7 +102,7 @@ const AdminSidebar: React.FC<{
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
-  const menuItems = [
+    const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-red-500' },
     { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
     { id: 'drive', label: 'Google Drive', icon: HardDrive, color: 'text-emerald-500' },
@@ -115,7 +111,7 @@ const AdminSidebar: React.FC<{
     { id: 'ads', label: 'Ads Manager', icon: Link, color: 'text-orange-500' },
     { id: 'settings', label: 'Settings', icon: Settings, color: 'text-purple-500' },
   ] as const;
-
+  
   return (
     <div className="fixed left-0 top-0 bottom-0 w-64 bg-zinc-950 border-r border-white/5 flex flex-col z-[60] hidden lg:flex">
       <div className="p-8">
@@ -159,302 +155,6 @@ const AdminSidebar: React.FC<{
         >
           <LogOut size={18} className="group-hover:text-red-500" />
           <span className="text-sm font-bold">Logout</span>
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const Dashboard: React.FC<{
-  movies: Movie[],
-  onEdit: (m: Movie) => void,
-  onDelete: (id: string) => void,
-  onDownload: (id: string) => void,
-  onView: (id: string) => void,
-  onShowDetails: (m: Movie) => void,
-  searchQuery: string,
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
-  loadingActions?: Record<string, boolean>
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab, loadingActions = {} }) => {
-  const stats = useMemo(() => {
-    const totalMovies = movies.length;
-    const totalViews = movies.reduce((sum, m) => sum + (m.views || 0), 0);
-    const totalDownloads = movies.reduce((sum, m) => sum + (m.downloads || 0), 0);
-    
-    // Group movies by month for the chart
-    const monthlyData: { [key: string]: number } = {};
-    const now = new Date();
-    
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = d.toLocaleString('default', { month: 'short' });
-      monthlyData[monthName] = 0;
-    }
-
-    movies.forEach(movie => {
-      if (movie.created_at) {
-        const date = new Date(movie.created_at);
-        const monthName = date.toLocaleString('default', { month: 'short' });
-        if (monthlyData.hasOwnProperty(monthName)) {
-          monthlyData[monthName]++;
-        }
-      }
-    });
-
-    const chartData = Object.entries(monthlyData).map(([name, count]) => ({
-      name,
-      movies: count
-    }));
-
-    return { totalMovies, totalViews, totalDownloads, chartData };
-  }, [movies]);
-
-  const recentMovies = useMemo(() => {
-    return [...movies].sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()).slice(0, 5);
-  }, [movies]);
-
-  return (
-    <div className="px-4 md:px-16 pt-8 md:pt-12 pb-32 md:pb-20">
-      <div className="mb-12">
-        <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
-          <BarChart3 className="text-red-500" size={32} /> Admin Dashboard
-        </h2>
-        <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Platform Overview & Statistics</p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Film size={80} />
-          </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Movies</p>
-          <h3 className="text-5xl font-black text-white mb-1">{stats.totalMovies}</h3>
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-            <TrendingUp size={14} /> +{movies.filter(m => {
-              const d = new Date(m.created_at || '');
-              const now = new Date();
-              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).length} this month
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Eye size={80} />
-          </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Views</p>
-          <h3 className="text-5xl font-black text-blue-400 mb-1">{stats.totalViews.toLocaleString()}</h3>
-          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Across all content</p>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Download size={80} />
-          </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Downloads</p>
-          <h3 className="text-5xl font-black text-emerald-400 mb-1">{stats.totalDownloads.toLocaleString()}</h3>
-          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Direct user engagement</p>
-        </motion.div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-16">
-        {/* Chart Section */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h4 className="text-lg font-bold mb-1">Movie Upload Activity</h4>
-              <p className="text-white/40 text-xs">Number of movies added over the last 6 months</p>
-            </div>
-            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-              <Activity size={14} className="text-red-500" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Live Data</span>
-            </div>
-          </div>
-          
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData}>
-                <defs>
-                  <linearGradient id="colorMovies" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#ffffff40', fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#ffffff40', fontSize: 12 }}
-                />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#18181b', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                    fontSize: '12px'
-                  }}
-                  itemStyle={{ color: '#ef4444' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="movies" 
-                  stroke="#ef4444" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorMovies)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        {/* Recent Movies */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4 }}
-          className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h4 className="text-lg font-bold mb-1">Recent Movies</h4>
-              <p className="text-white/40 text-xs">Latest additions to your catalog</p>
-            </div>
-            <button 
-              onClick={() => setActiveTab('movies')}
-              className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors"
-            >
-              View All
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {recentMovies.map(movie => (
-              <div 
-                key={movie.id} 
-                onClick={() => onShowDetails(movie)}
-                className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
-              >
-                <motion.div 
-                  transition={sharedTransition}
-                  className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0"
-                >
-                  <img src={movie.posterUrl} alt={movie.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </motion.div>
-                <div className="flex-1 min-w-0">
-                  <h5 className="text-sm font-bold truncate">{movie.title}</h5>
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider">{movie.category} • {movie.release_year || 'N/A'}</p>
-                </div>
-                <div className="flex items-center gap-2 px-4 border-l border-white/10">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onEdit(movie); }}
-                    className="p-2 bg-blue-500/10 text-white/40 hover:text-blue-400 transition-all rounded-lg"
-                    title="Edit Movie"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onDelete(movie.id); }}
-                    className="p-2 bg-red-500/10 text-white/40 hover:text-red-500 transition-all rounded-lg"
-                    title="Delete Movie"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <div className="flex items-center gap-4 px-4 border-l border-white/10 hidden md:flex">
-                  <div className="text-center">
-                    <p className="text-xs font-black">{movie.views || 0}</p>
-                    <p className="text-[8px] text-white/30 uppercase">Views</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-black">{movie.downloads || 0}</p>
-                    <p className="text-[8px] text-white/30 uppercase">DLs</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {recentMovies.length === 0 && (
-              <div className="text-center py-12 text-white/20">
-                <Film size={32} className="mx-auto mb-2 opacity-20" />
-                <p className="text-xs">No movies added yet.</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-};
-
-const AdminMobileNav: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
-  onAddClick: () => void,
-  onLogout: () => void
-}> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
-  const menuItems = [
-    { id: 'dashboard', label: 'Stats', icon: BarChart3 },
-    { id: 'movies', label: 'Movies', icon: Film },
-    { id: 'drive', label: 'Cloud', icon: HardDrive },
-    { id: 'feedback', label: 'Feed', icon: Users },
-    { id: 'settings', label: 'Cfg', icon: Settings },
-  ] as const;
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/5 z-[100] lg:hidden px-2 py-2 pb-safe">
-      <div className="flex items-center justify-between gap-1">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl transition-all ${
-              activeTab === item.id ? 'text-red-500' : 'text-white/40'
-            }`}
-          >
-            <item.icon size={18} />
-            <span className="text-[8px] font-black uppercase tracking-tighter truncate w-full text-center">{item.label}</span>
-          </button>
-        ))}
-        <div className="w-px h-6 bg-white/10 mx-0.5" />
-        <button
-          onClick={onAddClick}
-          className="w-9 h-9 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/20 active:scale-90 transition-transform shrink-0"
-        >
-          <Plus size={18} />
-        </button>
-        <button
-          onClick={onLogout}
-          className="w-9 h-9 rounded-full bg-white/5 text-white/40 flex items-center justify-center hover:text-red-500 transition-colors shrink-0"
-        >
-          <LogOut size={16} />
         </button>
       </div>
     </div>
@@ -655,11 +355,11 @@ const Navbar: React.FC<{
   isSearchActive: boolean,
   setIsSearchActive: (active: boolean) => void,
   movies: Movie[],
-  onDMCAClick: () => void,
+  onOpenLegal: (type: string) => void,
   adminView?: any,
   setAdminView?: (view: any) => void,
   setActiveCategory: (cat: string) => void
-}> = ({ isAdmin, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onDMCAClick, adminView, setAdminView, setActiveCategory }) => {
+}> = ({ isAdmin, onLogout, searchQuery, setSearchQuery, onAddClick, isSearchActive, setIsSearchActive, movies, onOpenLegal, adminView, setAdminView, setActiveCategory }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -849,10 +549,28 @@ const Navbar: React.FC<{
                   >
                     <div className="h-px bg-white/10 my-1" />
                     <button 
-                      onClick={() => { onDMCAClick(); setShowMenu(false); }}
+                      onClick={() => { onOpenLegal('dmca'); setShowMenu(false); }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-red-400"
                     >
                       <Shield size={18} /> DMCA Policy
+                    </button>
+                    <button 
+                      onClick={() => { onOpenLegal('privacy'); setShowMenu(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/70 hover:text-white"
+                    >
+                      <Lock size={18} /> Privacy Policy
+                    </button>
+                    <button 
+                      onClick={() => { onOpenLegal('disclaimer'); setShowMenu(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/70 hover:text-white"
+                    >
+                      <AlertTriangle size={18} /> Disclaimer
+                    </button>
+                    <button 
+                      onClick={() => { onOpenLegal('terms'); setShowMenu(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/70 hover:text-white"
+                    >
+                      <FileText size={18} /> Terms of Service
                     </button>
                   </motion.div>
                 </>
@@ -964,6 +682,7 @@ const AdsManager: React.FC<{
 };
 
 const MainApp = () => {
+  const { movieSlug } = useParams();
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
@@ -1006,13 +725,14 @@ const MainApp = () => {
   }, []);
   
   const [showAddEditModal, setShowAddEditModal] = useState(false);
+  const [showTmdbImporter, setShowTmdbImporter] = useState(false);
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [movieToDelete, setMovieToDelete] = useState<string | null>(null);
   const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const hasHandledInitialUrl = useRef(false);
-  const [showDMCA, setShowDMCA] = useState(false);
+  const [legalModalType, setLegalModalType] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All');
   const [visibleCount, setVisibleCount] = useState(24);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -1080,19 +800,21 @@ const MainApp = () => {
   const [isDriveLoading, setIsDriveLoading] = useState(false);
 
   useEffect(() => {
-    initAuth(
-      (user, token) => {
-        setGoogleUser(user);
-        // @ts-ignore
-        window.googleAccessToken = token;
-      },
-      () => {
-        setGoogleUser(null);
-        // @ts-ignore
-        window.googleAccessToken = null;
-      }
-    );
-  }, []);
+    if (isAdmin) {
+      initAuth(
+        (user, token) => {
+          setGoogleUser(user);
+          // @ts-ignore
+          window.googleAccessToken = token;
+        },
+        () => {
+          setGoogleUser(null);
+          // @ts-ignore
+          window.googleAccessToken = null;
+        }
+      );
+    }
+  }, [isAdmin]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -1118,7 +840,7 @@ const MainApp = () => {
       posterUrl: file.thumbnailLink ? file.thumbnailLink.replace('=s220', '=s800') : '',
     });
     setAdminView('movies');
-    setShowAddEditModal(true);
+    setShowTmdbImporter(true);
     toast.info("Prefilled movie details from Google Drive");
   };
 
@@ -1342,72 +1064,38 @@ const INITIAL_FORM_DATA = {
     };
   }, [movies]);
 
-  // Handle URL query parameter to open movie details modal (Initial load only)
+  // Sync modal state with URL parameter (movieSlug)
   useEffect(() => {
-    if (hasHandledInitialUrl.current || movies.length === 0) return;
+    if (movies.length === 0) return;
     
-    const params = new URLSearchParams(window.location.search);
-    const movieId = params.get('movie');
-    if (movieId && !selectedMovieForDetails) {
-      const movie = movies.find(m => m.id === movieId);
-      if (movie) {
+    if (movieSlug) {
+      const parts = movieSlug.split('-');
+      const id = parts[parts.length - 1];
+      const movie = movies.find(m => m.id === id);
+      
+      if (movie && (!selectedMovieForDetails || selectedMovieForDetails.id !== id)) {
         setSelectedMovieForDetails(movie);
-        hasHandledInitialUrl.current = true;
+      } else if (!movie) {
+        navigate('/', { replace: true });
       }
-    }
-  }, [movies]);
-
-  // Sync URL with selected movie and clean up
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const currentMovieId = url.searchParams.get('movie');
-    
-    if (selectedMovieForDetails) {
-      if (currentMovieId !== selectedMovieForDetails.id) {
-        url.searchParams.set('movie', selectedMovieForDetails.id);
-        window.history.replaceState({}, '', url);
-      }
-    } else if (currentMovieId && !isLoading) {
-      // Only remove if we are not loading and no movie is selected
-      url.searchParams.delete('movie');
-      window.history.replaceState({}, '', url);
-    }
-  }, [selectedMovieForDetails, isLoading]);
-
-  // Handle browser back button to close movie details modal
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
+    } else {
       if (selectedMovieForDetails) {
         setSelectedMovieForDetails(null);
       }
-    };
+    }
+  }, [movieSlug, movies, selectedMovieForDetails, navigate]);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedMovieForDetails) {
-        if (window.history.state?.modal === 'movie-details') {
-          window.history.back();
-        }
-        setSelectedMovieForDetails(null);
+        navigate('/');
       }
     };
-
-    if (selectedMovieForDetails) {
-      // Push a new state when the modal opens
-      window.history.pushState({ modal: 'movie-details' }, '');
-      window.addEventListener('popstate', handlePopState);
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [selectedMovieForDetails !== null]);
-
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedMovieForDetails, navigate]);
+  
   // Handle browser back button to close search
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -1463,12 +1151,17 @@ const INITIAL_FORM_DATA = {
 
   // Also lock scroll for other modals
   useEffect(() => {
-    if (showAddEditModal || showDMCA || movieToDelete) {
+    if (showAddEditModal || legalModalType || movieToDelete) {
       document.body.style.overflow = 'hidden';
     } else if (!selectedMovieForDetails) {
       document.body.style.overflow = 'unset';
     }
-  }, [showAddEditModal, showDMCA, movieToDelete, selectedMovieForDetails]);
+  }, [showAddEditModal, legalModalType, movieToDelete, selectedMovieForDetails]);
+
+    const getMovieSlug = (movie: Movie) => {
+    const titleSlug = movie.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return `${titleSlug}-${movie.id}`;
+  };
 
   const fetchMovies = async () => {
     if (!supabase) {
@@ -1509,7 +1202,7 @@ const INITIAL_FORM_DATA = {
   };
 
   const handleShowDetails = (movie: Movie) => {
-    setSelectedMovieForDetails(movie);
+    navigate(`/movie/${getMovieSlug(movie)}`);
   };
 
   const handleSaveMovie = async (e: React.FormEvent) => {
@@ -1743,7 +1436,7 @@ const INITIAL_FORM_DATA = {
           onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
+          onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowTmdbImporter(true); }}
           isSearchActive={isSearchActive}
           setIsSearchActive={(active) => {
             if (!active && window.history.state?.modal === 'search') {
@@ -1753,7 +1446,7 @@ const INITIAL_FORM_DATA = {
             if (!active) setSearchQuery('');
           }}
           movies={movies}
-          onDMCAClick={() => setShowDMCA(true)}
+          onOpenLegal={(type) => setLegalModalType(type)}
           setActiveCategory={handleSetActiveCategory}
         />
       )}
@@ -1763,14 +1456,14 @@ const INITIAL_FORM_DATA = {
           <AdminSidebar 
             activeTab={adminView} 
             setActiveTab={setAdminView} 
-            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowTmdbImporter(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
 
           <AdminMobileNav
             activeTab={adminView}
             setActiveTab={setAdminView}
-            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowAddEditModal(true); }}
+            onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowTmdbImporter(true); }}
             onLogout={() => { setIsAdmin(false); setAdminView('dashboard'); }}
           />
           
@@ -1790,7 +1483,7 @@ const INITIAL_FORM_DATA = {
                     transition={{ duration: 0.2 }}
                   >
                     {adminView === 'dashboard' && (
-                      <Dashboard 
+                      <AdminDashboard 
                         movies={movies} 
                         onEdit={handleEdit} 
                         onDelete={setMovieToDelete} 
@@ -2229,8 +1922,11 @@ const INITIAL_FORM_DATA = {
           <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
             <a href="#" className="hover:text-red-600 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-red-600 transition-colors">Terms of Service</a>
-            <button onClick={() => setShowDMCA(true)} className="hover:text-red-600 transition-colors uppercase">DMCA Policy</button>
-            <a href="#" className="hover:text-red-600 transition-colors">Contact Us</a>
+            <button onClick={() => setLegalModalType('dmca')} className="hover:text-red-600 transition-colors uppercase">DMCA Policy</button>
+            <button onClick={() => setLegalModalType('privacy')} className="hover:text-red-600 transition-colors uppercase">Privacy Policy</button>
+            <button onClick={() => setLegalModalType('terms')} className="hover:text-red-600 transition-colors uppercase">Terms of Service</button>
+            <button onClick={() => setLegalModalType('disclaimer')} className="hover:text-red-600 transition-colors uppercase">Disclaimer</button>
+            <a href="#" className="hover:text-red-600 transition-colors uppercase">Contact Us</a>
           </div>
           
           <p className="text-white/10 text-[10px] uppercase tracking-[0.3em] mt-4">
@@ -2243,11 +1939,25 @@ const INITIAL_FORM_DATA = {
 
 {/* Modals */}
 <AnimatePresence>
-        {showDMCA && (
-          <DMCAModal key="dmca-modal" onClose={() => setShowDMCA(false)} />
+        {legalModalType && (
+          <LegalModal type={legalModalType} onClose={() => navigate('/')} />
         )}
 
-        {showAddEditModal && (
+        
+        {showTmdbImporter && (
+          <TmdbImporter 
+            onClose={() => setShowTmdbImporter(false)}
+            onImported={(newMovie) => {
+              setMovies([newMovie, ...movies]);
+              setShowTmdbImporter(false);
+              // optionally open the edit modal to let them write notes:
+              setEditingMovie(newMovie);
+              setFormData(newMovie);
+              setShowAddEditModal(true);
+            }}
+          />
+        )}
+  {showAddEditModal && (
           <motion.div key="add-edit-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl overflow-y-auto p-0 md:p-4">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }} 
@@ -2437,21 +2147,7 @@ const INITIAL_FORM_DATA = {
               key={selectedMovieForDetails.id} 
               movie={selectedMovieForDetails} 
               allMovies={movies}
-              onClose={() => {
-                if (window.history.state?.modal === 'movie-details') {
-                  window.history.back();
-                }
-                setSelectedMovieForDetails(null);
-                setActiveLayoutId(null);
-              }} 
-              onMovieClick={(m) => {
-                setSelectedMovieForDetails(m);
-                setActiveLayoutId(`movie-poster-${m.id}-similar`);
-              }}
-              onDownload={handleDownload}
-              onView={handleView}
-              adSettings={adSettings}
-              loadingActions={loadingActions}
+              onClose={() => navigate('/')}
             />
           )}
         </AnimatePresence>
@@ -3691,7 +3387,100 @@ const MovieDetailModal: React.FC<{
   );
 };
 
-const DMCAModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const LegalModal: React.FC<{ type: string | null, onClose: () => void }> = ({ type, onClose }) => {
+  if (!type) return null;
+  
+  const content = {
+    dmca: {
+      title: 'DMCA / Copyright Policy',
+      icon: <Shield className="text-red-500" size={32} />,
+      body: (
+        <>
+          <p>
+            Movie Wallah respects the intellectual property rights of others and expects its users to do the same. In accordance with the Digital Millennium Copyright Act of 1998, the text of which may be found on the U.S. Copyright Office website at <a href="http://www.copyright.gov/legislation/dmca.pdf" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 underline">http://www.copyright.gov/legislation/dmca.pdf</a>, we will respond expeditiously to claims of copyright infringement committed using the Movie Wallah service that are reported to our Designated Copyright Agent.
+          </p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Takedown Request Process</h3>
+          <p>
+            If you are a copyright owner, or are authorized to act on behalf of one, or authorized to act under any exclusive right under copyright, please report alleged copyright infringements taking place on or through the Site by completing the following DMCA Notice of Alleged Infringement and delivering it to our Designated Copyright Agent. Upon receipt of the Notice as described below, we will take whatever action, in our sole discretion, we deem appropriate, including removal of the challenged material from the Site.
+          </p>
+          
+          <div className="bg-black/50 p-6 rounded-2xl border border-white/5 mt-4">
+            <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+              <Mail size={18} className="text-red-400" /> 
+              Designated Copyright Agent
+            </h4>
+            <p className="text-sm text-white/60 mb-1">Send your takedown notices to:</p>
+            <p className="font-mono text-red-400">moviewallah.online@gmail.com</p>
+          </div>
+          
+          <p className="text-sm text-white/50 mt-4">
+            Please note that under Section 512(f) of the DMCA, any person who knowingly materially misrepresents that material or activity is infringing may be subject to liability.
+          </p>
+        </>
+      )
+    },
+    privacy: {
+      title: 'Privacy Policy',
+      icon: <Lock className="text-red-500" size={32} />,
+      body: (
+        <>
+          <p>Welcome to Movie Wallah's Privacy Policy. Your privacy is important to us. This policy explains how we collect, use, and protect your information when you use our services.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Information We Collect</h3>
+          <p>We do not collect personally identifiable information from regular visitors. If you are an administrator, we collect your email address for authentication purposes. We may collect anonymous analytics data such as browser type, device type, and referring pages to improve our service.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">How We Use Your Information</h3>
+          <p>The anonymous data we collect is solely used to understand how our users interact with the site, allowing us to enhance the user experience and optimize our content delivery. We do not sell, rent, or share your information with third parties.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Cookies</h3>
+          <p>We may use cookies or similar tracking technologies to store your preferences and session information (e.g., keeping you logged in as an administrator). You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Third-Party Links</h3>
+          <p>Our site may contain links to third-party websites or services that are not owned or controlled by Movie Wallah. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party web sites or services.</p>
+        </>
+      )
+    },
+    disclaimer: {
+      title: 'Disclaimer',
+      icon: <AlertTriangle className="text-red-500" size={32} />,
+      body: (
+        <>
+          <p>The information and content provided on Movie Wallah is for general informational and entertainment purposes only.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Content Liability</h3>
+          <p>Movie Wallah does not host any video files on its servers. All videos and movies are hosted on third-party services and are publicly available on the internet. We simply provide links to these files in an organized format.</p>
+          <p>We do not guarantee the accuracy, relevance, timeliness, or completeness of any information on these external websites. The inclusion of any links does not necessarily imply a recommendation or endorse the views expressed within them.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">No Warranties</h3>
+          <p>The site and all content and services provided on the site are provided on an "as is" and "as available" basis without any warranty or condition, express, implied, or statutory. We do not warrant that the site will be uninterrupted, timely, secure, or error-free.</p>
+        </>
+      )
+    },
+    terms: {
+      title: 'Terms of Service',
+      icon: <FileText className="text-red-500" size={32} />,
+      body: (
+        <>
+          <p>By accessing or using Movie Wallah, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, then you may not access the service.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Use of Service</h3>
+          <p>You agree to use the site only for lawful purposes and in a way that does not infringe the rights of, restrict, or inhibit anyone else's use and enjoyment of the site. Prohibited behavior includes harassing or causing distress or inconvenience to any other user, transmitting obscene or offensive content, or disrupting the normal flow of dialogue within our site.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Intellectual Property</h3>
+          <p>The site and its original content (excluding the movies and videos linked, which are the property of their respective owners), features, and functionality are owned by Movie Wallah and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
+          
+          <h3 className="text-xl font-bold text-white mt-4">Changes to Terms</h3>
+          <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+        </>
+      )
+    }
+  };
+
+  const activeContent = content[type as keyof typeof content];
+
+  if (!activeContent) return null;
+
   return (
     <motion.div 
       initial={{ opacity: 0 }} 
@@ -3707,8 +3496,8 @@ const DMCAModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       >
         <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/10 pb-4">
           <h2 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <Shield className="text-red-500" size={32} />
-            DMCA / Copyright Policy
+            {activeContent.icon}
+            {activeContent.title}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
             <X size={24} />
@@ -3716,43 +3505,12 @@ const DMCAModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar flex flex-col gap-6 text-white/80 leading-relaxed">
-          <p>
-            Movie Wallah respects the intellectual property rights of others and expects its users to do the same. In accordance with the Digital Millennium Copyright Act of 1998, the text of which may be found on the U.S. Copyright Office website at <a href="http://www.copyright.gov/legislation/dmca.pdf" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 underline">http://www.copyright.gov/legislation/dmca.pdf</a>, we will respond expeditiously to claims of copyright infringement committed using the Movie Wallah service that are reported to our Designated Copyright Agent.
-          </p>
-          
-          <h3 className="text-xl font-bold text-white mt-4">Takedown Request Process</h3>
-          <p>
-            If you are a copyright owner, or are authorized to act on behalf of one, or authorized to act under any exclusive right under copyright, please report alleged copyright infringements taking place on or through the Site by completing the following DMCA Notice of Alleged Infringement and delivering it to our Designated Copyright Agent. Upon receipt of the Notice as described below, we will take whatever action, in our sole discretion, we deem appropriate, including removal of the challenged material from the Site.
-          </p>
-
-          <h3 className="text-xl font-bold text-white mt-4">DMCA Notice of Alleged Infringement ("Notice")</h3>
-          <ul className="list-disc pl-6 space-y-2">
-            <li>Identify the copyrighted work that you claim has been infringed, or - if multiple copyrighted works are covered by this Notice - you may provide a representative list of the copyrighted works that you claim have been infringed.</li>
-            <li>Identify the material that you claim is infringing (or to be the subject of infringing activity) and that is to be removed or access to which is to be disabled, and information reasonably sufficient to permit us to locate the material, including at a minimum, if applicable, the URL of the link shown on the Site where such material may be found.</li>
-            <li>Provide your mailing address, telephone number, and, if available, email address.</li>
-            <li>Include both of the following statements in the body of the Notice:
-              <ul className="list-[circle] pl-6 mt-2 space-y-2 text-white/60">
-                <li>"I hereby state that I have a good faith belief that the disputed use of the copyrighted material is not authorized by the copyright owner, its agent, or the law (e.g., as a fair use)."</li>
-                <li>"I hereby state that the information in this Notice is accurate and, under penalty of perjury, that I am the owner, or authorized to act on behalf of the owner, of the copyright or of an exclusive right under the copyright that is allegedly infringed."</li>
-              </ul>
-            </li>
-            <li>Provide your full legal name and your electronic or physical signature.</li>
-          </ul>
-
-          <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4">
-            <h4 className="font-bold text-white mb-2">Deliver this Notice, with all items completed, to:</h4>
-            <p className="font-mono text-red-400">moviewallah.online@gmail.com</p>
-          </div>
-          
-          <p className="text-sm text-white/50 mt-4">
-            Please note that under Section 512(f) of the DMCA, any person who knowingly materially misrepresents that material or activity is infringing may be subject to liability.
-          </p>
+          {activeContent.body}
         </div>
       </motion.div>
     </motion.div>
   );
 };
-
 const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
 
 export default function App() {
@@ -3760,6 +3518,7 @@ export default function App() {
     <React.Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div></div>}>
       <Routes>
         <Route path="/" element={<MainApp />} />
+        <Route path="/movie/:movieSlug" element={<MainApp />} />
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
