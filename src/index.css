@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Bakbak+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *), :is(.dark)&);
 
 @theme {
-  --font-sans: "Bakbak One", system-ui, sans-serif;
-  --font-display: "Bakbak One", system-ui, sans-serif;
-  --font-serif: "Bakbak One", system-ui, sans-serif;
+  --font-sans: "Nunito", system-ui, sans-serif;
+  --font-display: "Nunito", system-ui, sans-serif;
+  --font-serif: "Nunito", system-ui, sans-serif;
   
   --color-midnight: #050505;
   --color-surface: #0A0A0A;
@@ -67,6 +67,10 @@
   }
   .label-micro {
     @apply font-sans text-[10px] uppercase tracking-[0.2em] font-bold text-white/40;
+  }
+  .dynamic-text {
+    @apply text-white;
+    mix-blend-mode: difference;
   }
 }
 
