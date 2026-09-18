@@ -35,9 +35,11 @@ export const TmdbImporter: React.FC<{
       const vids = await tmdbVideos(tmdbMovie.id);
       
       const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const slug = slugify(d.title) + "-" + (d.release_date || "").slice(0, 4);
+      const slug = slugify(d.title) + "-" + (d.release_date || "").slice(0, 4) + "-" + d.id;
       
       const trailer = vids.results?.find((v: any) => v.site === "YouTube" && v.type === "Trailer");
+      const posterFull = d.poster_path ? (d.poster_path.startsWith('http') ? d.poster_path : `https://image.tmdb.org/t/p/w500${d.poster_path}`) : '';
+      const bannerFull = d.backdrop_path ? (d.backdrop_path.startsWith('http') ? d.backdrop_path : `https://image.tmdb.org/t/p/w1280${d.backdrop_path}`) : posterFull;
 
       const newMovie: any = {
         tmdb_id: d.id,
@@ -48,7 +50,7 @@ export const TmdbImporter: React.FC<{
         release_date: d.release_date,
         tagline: d.tagline || "",
         overview: d.overview || "",
-        description: d.overview || d.tagline || "", // Critical fix for database NOT NULL constraints
+        description: d.overview || d.tagline || d.title || "", // Critical fix for database NOT NULL constraints
         runtime_min: d.runtime || 0,
         duration: d.runtime ? `${d.runtime} min` : "",
         vote_average: d.vote_average || 0,
@@ -61,19 +63,33 @@ export const TmdbImporter: React.FC<{
         director: "",
         cast: "",
         trailerUrl: trailer ? trailer.key : "",
-        is_published: false,
+        is_published: true,
         created_at: new Date().toISOString()
       };
 
       if (supabase) {
-        const { data, error } = await supabase.from('movies').insert([newMovie]).select().single();
-        if (error) throw error;
+        const { data, error } = await supabase.from('movies').upsert([newMovie], { onConflict: 'tmdb_id' }).select().single();
+        if (error) {
+          // If upsert fails (e.g. RLS on select), fallback to plain insert without single select or local
+          const fallbackInsert = await supabase.from('movies').insert([newMovie]);
+          if (fallbackInsert.error && !fallbackInsert.error.message.includes('unique')) {
+            throw fallbackInsert.error;
+          }
+        }
         toast.success(`Tracked ${d.title}!`);
-        onImported(data || newMovie);
+        onImported({
+          ...(data || newMovie),
+          posterUrl: posterFull,
+          bannerUrl: bannerFull
+        });
       } else {
         newMovie.id = Date.now().toString();
         toast.success(`Tracked ${d.title} (Local)`);
-        onImported(newMovie);
+        onImported({
+          ...newMovie,
+          posterUrl: posterFull,
+          bannerUrl: bannerFull
+        });
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to track movie");

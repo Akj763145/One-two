@@ -22,11 +22,14 @@ import 'swiper/css/pagination';
 interface Movie {
   id: string;
   title: string;
-  url: string;
+  url?: string;
   viewUrl?: string;
   trailerUrl?: string;
-  posterUrl: string;
-  description: string;
+  posterUrl?: string;
+  bannerUrl?: string;
+  poster_path?: string;
+  backdrop_path?: string;
+  description?: string;
   category?: string;
   director?: string;
   cast?: string;
@@ -1081,13 +1084,16 @@ const INITIAL_FORM_DATA = {
     if (movies.length === 0) return;
     
     if (movieSlug) {
-      const parts = movieSlug.split('-');
-      const id = parts[parts.length - 1];
-      const movie = movies.find(m => m.id === id);
+      const movie = movies.find(m => 
+        m.id === movieSlug || 
+        (m.slug && m.slug === movieSlug) ||
+        movieSlug.endsWith(`-${m.id}`) ||
+        getMovieSlug(m) === movieSlug
+      );
       
-      if (movie && (!selectedMovieForDetails || selectedMovieForDetails.id !== id)) {
+      if (movie && (!selectedMovieForDetails || selectedMovieForDetails.id !== movie.id)) {
         setSelectedMovieForDetails(movie);
-      } else if (!movie) {
+      } else if (!movie && !isLoading) {
         navigate('/', { replace: true });
       }
     } else {
@@ -1095,7 +1101,7 @@ const INITIAL_FORM_DATA = {
         setSelectedMovieForDetails(null);
       }
     }
-  }, [movieSlug, movies, selectedMovieForDetails, navigate]);
+  }, [movieSlug, movies, selectedMovieForDetails, isLoading, navigate]);
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -1175,10 +1181,23 @@ const INITIAL_FORM_DATA = {
     return `${titleSlug}-${movie.id}`;
   };
 
+  const formatMovieRecord = (m: any): Movie => {
+    const poster = m.posterUrl || (m.poster_path ? (m.poster_path.startsWith('http') ? m.poster_path : `https://image.tmdb.org/t/p/w500${m.poster_path}`) : '');
+    const banner = m.bannerUrl || (m.backdrop_path ? (m.backdrop_path.startsWith('http') ? m.backdrop_path : `https://image.tmdb.org/t/p/w1280${m.backdrop_path}`) : poster);
+    return {
+      ...m,
+      posterUrl: poster,
+      bannerUrl: banner,
+      description: m.description || m.overview || '',
+      category: m.category || (m.genres && m.genres.length > 0 ? m.genres[0] : 'Other')
+    };
+  };
+
   const fetchMovies = async () => {
     if (!supabase) {
       const savedMovies = localStorage.getItem('movieWallah_movies');
-      setMovies(savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES);
+      const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
+      setMovies(rawList.map(formatMovieRecord));
       setIsLoading(false);
       return;
     }
@@ -1192,21 +1211,23 @@ const INITIAL_FORM_DATA = {
         // Handle specific network errors or misconfigurations
         if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
           const savedMovies = localStorage.getItem('movieWallah_movies');
-          setMovies(savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES);
+          const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
+          setMovies(rawList.map(formatMovieRecord));
           toast.error("Network error: Using local backup data.");
         } else {
           setErrorMsg('Failed to load movies. Please check your Supabase configuration.');
           toast.error("Database error. Please check your settings.");
         }
       } else if (data) {
-        setMovies(data);
+        setMovies(data.map(formatMovieRecord));
         setErrorMsg(null);
       }
     } catch (err: any) {
       console.error('Unexpected error fetching movies:', err);
       // Fallback for absolute network failure
       const savedMovies = localStorage.getItem('movieWallah_movies');
-      setMovies(savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES);
+      const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
+      setMovies(rawList.map(formatMovieRecord));
       toast.error("Connection failed. Running in offline mode.");
     } finally {
       setIsLoading(false);
@@ -1224,10 +1245,25 @@ const INITIAL_FORM_DATA = {
     
     const movieData: any = { ...formData };
     
+    // If posterUrl was provided in form, set poster_path
+    if (formData.posterUrl && !movieData.poster_path) {
+      movieData.poster_path = formData.posterUrl;
+    }
+    // Ensure description NOT NULL constraint is met
+    if (!movieData.description) {
+      movieData.description = movieData.overview || movieData.title || 'Movie';
+    }
+    movieData.is_published = true;
+    if (!movieData.slug) {
+      const titleSlug = (movieData.title || 'movie').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      movieData.slug = `${titleSlug}-${Date.now()}`;
+    }
+
     // Strip out legacy columns that have been removed from the Supabase schema
     delete movieData.url;
     delete movieData.viewUrl;
     delete movieData.posterUrl;
+    delete movieData.bannerUrl;
     delete movieData.player_type;
     delete movieData.auto_play_video;
     delete movieData.auto_play_video_url;
@@ -1237,33 +1273,43 @@ const INITIAL_FORM_DATA = {
 
     if (!supabase) {
       if (editingMovie) {
-        setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+        const updated = formatMovieRecord({ ...editingMovie, ...formData, ...movieData });
+        setMovies(movies.map(m => m.id === editingMovie.id ? updated : m));
         addAuditLog('update', `Updated movie: ${movieData.title}`);
       } else {
-        setMovies([{ ...movieData, id: Date.now().toString() }, ...movies]);
+        const added = formatMovieRecord({ ...formData, ...movieData, id: Date.now().toString() });
+        setMovies([added, ...movies]);
         addAuditLog('create', `Added new movie: ${movieData.title}`);
       }
     } else {
       if (editingMovie) {
-        const { error } = await supabase.from('movies').update(movieData).eq('id', editingMovie.id);
+        const updatePayload = { ...movieData };
+        delete updatePayload.id;
+        delete updatePayload.created_at;
+        const { error } = await supabase.from('movies').update(updatePayload).eq('id', editingMovie.id);
         if (error) {
           toast.error('Error updating movie: ' + error.message);
+          setIsActionLoading(false);
           return setErrorMsg('Error updating movie: ' + error.message);
         }
-        setMovies(movies.map(m => m.id === editingMovie.id ? { ...m, ...movieData } : m));
+        const updated = formatMovieRecord({ ...editingMovie, ...formData, ...movieData });
+        setMovies(movies.map(m => m.id === editingMovie.id ? updated : m));
         addAuditLog('update', `Updated movie: ${movieData.title}`);
         toast.success('Movie updated successfully');
       } else {
         const { data, error } = await supabase.from('movies').insert([movieData]).select('*');
         if (error) {
           toast.error('Error adding movie: ' + error.message);
+          setIsActionLoading(false);
           return setErrorMsg('Error adding movie: ' + error.message);
         }
         if (data && data.length > 0) {
-          setMovies([...data, ...movies]);
+          const added = formatMovieRecord(data[0]);
+          setMovies([added, ...movies]);
           addAuditLog('create', `Added new movie: ${movieData.title}`);
         } else {
-          setMovies([{ ...movieData, id: Date.now().toString(), downloads: 0, views: 0 }, ...movies]);
+          const added = formatMovieRecord({ ...movieData, id: Date.now().toString() });
+          setMovies([added, ...movies]);
           addAuditLog('create', `Added new movie: ${movieData.title}`);
           fetchMovies();
         }
@@ -1280,9 +1326,13 @@ const INITIAL_FORM_DATA = {
   const handleEdit = (movie: Movie) => {
     setEditingMovie(movie);
     setFormData({
-      title: movie.title, url: movie.url, viewUrl: movie.viewUrl || '', trailerUrl: movie.trailerUrl || '',
-      posterUrl: movie.posterUrl, description: movie.description,
-      category: movie.category || 'Other',
+      title: movie.title || '',
+      url: movie.url || '',
+      viewUrl: movie.viewUrl || '',
+      trailerUrl: movie.trailerUrl || '',
+      posterUrl: movie.posterUrl || (movie.poster_path ? (movie.poster_path.startsWith('http') ? movie.poster_path : `https://image.tmdb.org/t/p/w500${movie.poster_path}`) : ''),
+      description: movie.description || movie.overview || '',
+      category: movie.category || (movie.genres && movie.genres.length > 0 ? movie.genres[0] : 'Other'),
       is_hero: movie.is_hero || false,
       is_trending: movie.is_trending || false,
       director: movie.director || '',
@@ -1304,7 +1354,17 @@ const INITIAL_FORM_DATA = {
     if (!movieToDelete) return;
     setIsActionLoading(true);
     const movie = movies.find(m => m.id === movieToDelete);
-    if (supabase) await supabase.from('movies').delete().eq('id', movieToDelete);
+    if (supabase) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(movieToDelete);
+      if (isUUID) {
+        const { error } = await supabase.from('movies').delete().eq('id', movieToDelete);
+        if (error) {
+          toast.error('Failed to delete: ' + error.message);
+          setIsActionLoading(false);
+          return;
+        }
+      }
+    }
     setMovies(movies.filter(m => m.id !== movieToDelete));
     addAuditLog('delete', `Deleted movie: ${movie?.title || movieToDelete}`);
     setMovieToDelete(null);
@@ -1363,18 +1423,7 @@ const INITIAL_FORM_DATA = {
     setMovies(prev => prev.map(m => m.id === movieId ? { ...m, downloads: newDownloads } : m));
     toast.success(`Starting download for ${movie.title}`);
 
-    if (supabase) {
-      try {
-        const { error } = await supabase.from('movies').update({ downloads: newDownloads }).eq('id', movieId);
-        if (error) console.error('Error updating downloads:', error.message);
-      } catch (err) {
-        console.error('Failed to update downloads:', err);
-      } finally {
-        setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: false }));
-      }
-    } else {
-      setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: false }));
-    }
+    setLoadingActions(prev => ({ ...prev, [`download-${movieId}`]: false }));
   };
 
   const handleView = async (movieId: string) => {
@@ -1387,10 +1436,9 @@ const INITIAL_FORM_DATA = {
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('movies').update({ views: newViews }).eq('id', movieId);
-        if (error) console.error('Error updating views:', error.message);
-      } catch (err) {
-        console.error('Failed to update views:', err);
+        await supabase.from('movies').update({ views: newViews }).eq('id', movieId);
+      } catch (_) {
+        // Silently ignore if column does not exist
       } finally {
         setLoadingActions(prev => ({ ...prev, [`view-${movieId}`]: false }));
       }
@@ -2825,12 +2873,12 @@ const SystemHealth: React.FC<{ movies: Movie[] }> = ({ movies }) => {
 
 // Reusable Movie Poster Component with Fallback
 const MoviePoster: React.FC<{ 
-  src: string; 
+  src?: string; 
   alt: string; 
   className?: string; 
   contain?: boolean; 
   priority?: boolean;
-}> = ({ src, alt, className = "", contain = false, priority = false }) => {
+}> = ({ src = "", alt, className = "", contain = false, priority = false }) => {
   const [hasError, setHasError] = useState(false);
 
   // Reset error state when src changes
@@ -2838,16 +2886,24 @@ const MoviePoster: React.FC<{
     setHasError(false);
   }, [src]);
 
+  const resolvedSrc = useMemo(() => {
+    if (!src) return '';
+    if (src.startsWith('/') && !src.startsWith('//')) {
+      return `https://image.tmdb.org/t/p/w500${src}`;
+    }
+    return src;
+  }, [src]);
+
   return (
     <div className={`relative w-full bg-zinc-900 overflow-hidden shimmer ${className.includes('aspect-') ? '' : 'aspect-[2/3]'} ${className}`}>
-      {(hasError || !src) ? (
+      {(hasError || !resolvedSrc) ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-white/20 p-4 text-center z-10">
           <Film size={40} className="mb-2 opacity-20" />
           <span className="text-[9px] font-black uppercase tracking-widest opacity-40">No Poster</span>
         </div>
       ) : (
         <img 
-          src={src} 
+          src={resolvedSrc} 
           alt={alt} 
           onError={() => setHasError(true)}
           className={`w-full h-full relative z-10 ${contain ? 'object-contain' : 'object-cover'}`} 
@@ -2966,7 +3022,8 @@ const MovieDetailModal: React.FC<{
   const [showCopiedToast, setShowCopiedToast] = useState(false);
   
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/?movie=${movie.id}`;
+    const titleSlug = (movie.title || 'movie').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const shareUrl = `${window.location.origin}/movie/${movie.slug || `${titleSlug}-${movie.id}`}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -2993,7 +3050,8 @@ const MovieDetailModal: React.FC<{
   const fetchReviews = useCallback(async () => {
     setIsReviewsLoading(true);
     try {
-      if (supabase) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(movie.id);
+      if (supabase && isUUID) {
         const { data } = await supabase.from('reviews').select('*').eq('movie_id', movie.id).order('created_at', { ascending: false });
         setReviews(data || []);
       } else {
@@ -3030,31 +3088,40 @@ const MovieDetailModal: React.FC<{
     if (!userName.trim() || !text.trim()) return;
     setIsSubmitting(true);
     
-    const newReview: Review = {
-      id: Date.now().toString(),
-      movie_id: movie.id,
-      user_name: userName,
-      rating,
-      text,
-      created_at: new Date().toISOString()
-    };
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(movie.id);
 
-    if (supabase) {
+    if (supabase && isUUID) {
       try {
-        const { error } = await supabase.from('reviews').insert([newReview]);
+        const { error } = await supabase.from('reviews').insert([{
+          movie_id: movie.id,
+          user_name: userName.trim(),
+          rating,
+          text: text.trim()
+        }]);
         if (error) {
           console.error('Error submitting review:', error.message);
-          alert('Failed to submit review. Please try again.');
+          toast.error('Failed to submit review: ' + error.message);
         } else {
+          toast.success('Review submitted successfully');
           fetchReviews();
         }
       } catch (err) {
         console.error('Failed to submit review:', err);
+        toast.error('Failed to submit review');
       }
     } else {
+      const newReview: Review = {
+        id: Date.now().toString(),
+        movie_id: movie.id,
+        user_name: userName.trim(),
+        rating,
+        text: text.trim(),
+        created_at: new Date().toISOString()
+      };
       const updated = [newReview, ...reviews];
       setReviews(updated);
       localStorage.setItem(`reviews_${movie.id}`, JSON.stringify(updated));
+      toast.success('Review submitted successfully');
     }
     
     setUserName('');
@@ -3118,7 +3185,7 @@ const MovieDetailModal: React.FC<{
               >
                 {/* Fixed Background Poster */}
                 <MoviePoster 
-                  src={movie.posterUrl} 
+                  src={movie.bannerUrl || movie.posterUrl} 
                   alt="" 
                   priority={true} 
                   className="absolute inset-0 h-full w-full object-cover opacity-80" 

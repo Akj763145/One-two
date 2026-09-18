@@ -50,6 +50,19 @@ export default function AdminLogin() {
         navigate('/');
       }
     } catch (err: any) {
+      // If Supabase auth failed, try the backend fallback credentials endpoint
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+          localStorage.setItem('movieWallah_admin', 'true');
+          navigate('/');
+          return;
+        }
+      } catch (_) {}
       setErrorMsg(err.message || 'Failed to authenticate');
     } finally {
       setLoading(false);
