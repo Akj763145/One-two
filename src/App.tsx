@@ -5,6 +5,7 @@ import { Search, Mail, AlertTriangle, Shield, Plus, X, Edit, Trash2, Download, P
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { TmdbImporter } from './components/TmdbImporter';
+import { WhereToWatch } from './components/WhereToWatch';
 import { initAuth, googleSignIn, getAccessToken, logoutGoogle } from './lib/firebaseAuth';
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const AdminMobileNav = React.lazy(() => import('./components/AdminMobileNav').then(m => ({ default: m.AdminMobileNav })));
@@ -41,6 +42,17 @@ interface Movie {
   match_score?: number;
   auto_play_video?: boolean;
   auto_play_video_url?: string;
+  notes?: string;
+  tmdb_id?: number;
+  imdb_id?: string;
+  vote_average?: number;
+  vote_count?: number;
+  runtime_min?: number;
+  tagline?: string;
+  overview?: string;
+  genres?: string[];
+  slug?: string;
+  is_published?: boolean;
 }
 
 interface AuditLog {
@@ -1210,7 +1222,18 @@ const INITIAL_FORM_DATA = {
     setErrorMsg(null);
     setIsActionLoading(true);
     
-    const movieData = { ...formData };
+    const movieData: any = { ...formData };
+    
+    // Strip out legacy columns that have been removed from the Supabase schema
+    delete movieData.url;
+    delete movieData.viewUrl;
+    delete movieData.posterUrl;
+    delete movieData.player_type;
+    delete movieData.auto_play_video;
+    delete movieData.auto_play_video_url;
+    delete movieData.quality;
+    delete movieData.match_score;
+    delete movieData.downloads;
 
     if (!supabase) {
       if (editingMovie) {
@@ -1507,6 +1530,7 @@ const INITIAL_FORM_DATA = {
                         onBulkUpdate={handleBulkUpdate}
                         onBulkDelete={handleBulkDelete}
                         loadingActions={loadingActions}
+                        onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowTmdbImporter(true); }}
                       />
                     )}
                     {adminView === 'drive' && (
@@ -1683,7 +1707,7 @@ const INITIAL_FORM_DATA = {
                   className="hero-swiper w-full h-full !px-4 md:!px-20"
                 >
                   {featuredMovies.map((movie, index) => (
-                    <SwiperSlide key={movie.id} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group transform-gpu">
+                    <SwiperSlide key={`${movie.id}-${index}`} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group transform-gpu">
                       <div className="absolute inset-0">
                         <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img h-full w-full object-cover" priority={index === 0} />
                       </div>
@@ -1798,8 +1822,8 @@ const INITIAL_FORM_DATA = {
                               {isLoading ? (
                                 Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                               ) : (
-                                currentMovies.map(movie => (
-                          <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
+                                currentMovies.map((movie, idx) => (
+                          <MovieCard key={`${movie.id}-${idx}`} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                                 ))
                               )}
                             </div>
@@ -1847,8 +1871,8 @@ const INITIAL_FORM_DATA = {
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
-                        {trendingMovies.map((movie) => (
-                          <SwiperSlide key={movie.id} className="!w-[160px] md:!w-[220px]">
+                        {trendingMovies.map((movie, idx) => (
+                          <SwiperSlide key={`${movie.id}-${idx}`} className="!w-[160px] md:!w-[220px]">
                             <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                           </SwiperSlide>
                         ))}
@@ -1876,7 +1900,7 @@ const INITIAL_FORM_DATA = {
                             Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
                           ) : (
                             currentMovies.map((movie, index) => (
-                              <React.Fragment key={movie.id}>
+                              <React.Fragment key={`${movie.id}-${index}`}>
                                 <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                                 {(index + 1) % 10 === 0 && index !== currentMovies.length - 1 && adSettings.enabled && adSettings.homeGridInline && (
                                   <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 w-full my-2 flex justify-center">
@@ -2143,11 +2167,16 @@ const INITIAL_FORM_DATA = {
 
         <AnimatePresence>
           {selectedMovieForDetails && (
-              <MovieDetailModal 
+            <MovieDetailModal 
               key={selectedMovieForDetails.id} 
               movie={selectedMovieForDetails} 
               allMovies={movies}
               onClose={() => navigate('/')}
+              onMovieClick={handleShowDetails}
+              onDownload={handleDownload}
+              onView={handleView}
+              adSettings={adSettings}
+              loadingActions={loadingActions}
             />
           )}
         </AnimatePresence>
@@ -2205,8 +2234,9 @@ const MovieManagement: React.FC<{
   searchQuery: string,
   onBulkUpdate: (ids: string[], updates: Partial<Movie>) => Promise<void>,
   onBulkDelete: (ids: string[]) => Promise<void>,
-  loadingActions?: Record<string, boolean>
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onBulkUpdate, onBulkDelete, loadingActions = {} }) => {
+  loadingActions?: Record<string, boolean>,
+  onAddClick?: () => void
+}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, onBulkUpdate, onBulkDelete, loadingActions = {}, onAddClick }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -2267,8 +2297,17 @@ const MovieManagement: React.FC<{
           <p className="text-white/40 uppercase tracking-[0.2em] text-[10px] font-bold">Catalog Control & Editing</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          {onAddClick && (
+            <button 
+              onClick={onAddClick}
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-sm font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 active:scale-95 cursor-pointer"
+            >
+              <Plus size={18} /> Add Movie
+            </button>
+          )}
+
+          <div className="relative w-full sm:w-auto flex-1 sm:flex-initial">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
             <input 
               type="text" 
@@ -2357,9 +2396,9 @@ const MovieManagement: React.FC<{
 
       {filteredMovies.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-          {filteredMovies.map(movie => (
+          {filteredMovies.map((movie, idx) => (
             <MovieCard 
-              key={movie.id} 
+              key={`${movie.id}-${idx}`} 
               movie={movie} 
               isAdmin={true} 
               onEdit={onEdit} 
@@ -2375,10 +2414,18 @@ const MovieManagement: React.FC<{
           ))}
         </div>
       ) : (
-        <div className="text-center py-32 bg-white/5 rounded-3xl border border-white/10">
-          <Film size={48} className="mx-auto mb-4 text-white/20" />
+        <div className="text-center py-32 bg-white/5 rounded-3xl border border-white/10 flex flex-col items-center justify-center p-6">
+          <Film size={48} className="mb-4 text-white/20" />
           <h3 className="text-xl font-bold mb-2">No movies found</h3>
-          <p className="text-white/50">Try adjusting your search or add a new movie.</p>
+          <p className="text-white/50 mb-6 max-w-md">Try adjusting your search query, or import/create a new movie right away.</p>
+          {onAddClick && (
+            <button 
+              onClick={onAddClick}
+              className="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-sm font-bold text-white transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 active:scale-95 cursor-pointer"
+            >
+              <Plus size={18} /> Add New Movie
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -3110,33 +3157,15 @@ const MovieDetailModal: React.FC<{
                   }}
                   className="flex flex-wrap items-center gap-4 mt-8"
                 >
-                  {(movie.trailerUrl || movie.viewUrl) && (
-                    <button 
-                      onClick={(e) => {
-                        if (movie.trailerUrl) {
-                          e.preventDefault();
-                          onView(movie.id);
-                          document.getElementById('trailer-section')?.scrollIntoView({ behavior: 'smooth' });
-                        } else if (movie.viewUrl) {
-                          window.open(movie.viewUrl, '_blank');
-                          onView(movie.id);
-                        }
-                      }}
+                  {movie.trailerUrl && (
+                    <a 
+                      href={movie.trailerUrl.startsWith('http') ? movie.trailerUrl : `https://www.youtube.com/watch?v=${movie.trailerUrl}`}
+                      target="_blank" rel="noopener noreferrer"
                       className="bg-white text-black px-8 md:px-10 py-2.5 rounded font-black flex items-center justify-center gap-2 md:gap-3 hover:bg-white/90 transition-all text-sm md:text-lg active:scale-95 shadow-lg"
                     >
-                      {loadingActions[`view-${movie.id}`] ? <Spinner size={20} /> : <Play size={20} className="fill-current" />} {movie.trailerUrl ? 'Watch now' : 'Play'}
-                    </button>
+                      <Play size={20} className="fill-current" /> Watch Trailer
+                    </a>
                   )}
-                  
-                  <a 
-                    href={movie.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    onClick={() => onDownload(movie.id)}
-                    className="bg-zinc-500/30 hover:bg-zinc-500/50 text-white px-8 md:px-10 py-2.5 rounded font-black flex items-center justify-center gap-2 md:gap-3 transition-all text-sm md:text-lg active:scale-95 backdrop-blur-md border border-white/10"
-                  >
-                    {loadingActions[`download-${movie.id}`] ? <Spinner size={20} /> : <Download size={22} />} Download
-                  </a>
                   
                   <button 
                     onClick={handleShare}
@@ -3159,40 +3188,59 @@ const MovieDetailModal: React.FC<{
             className="p-8 md:p-14 pt-10 space-y-16"
           >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="md:col-span-2 space-y-6">
+            <div className="md:col-span-2 space-y-8">
               <div className="flex flex-wrap items-center gap-4 text-sm font-bold">
-                <span className="text-[#46d369]">{movie.match_score || 98}% Match</span>
+                <span className="text-[#46d369]">★ {movie.vote_average || 'New'}</span>
                 <span className="text-white/60">{movie.release_year || '2026'}</span>
-                <span className="border border-white/40 px-1.5 py-0.5 text-[10px] rounded text-white/90">{movie.maturity_rating || '18+'}</span>
-                <span className="text-white/60">{movie.duration || '2h 15m'}</span>
+                <span className="border border-white/40 px-1.5 py-0.5 text-[10px] rounded text-white/90">{movie.runtime_min ? `${movie.runtime_min}m` : '120m'}</span>
                 <span className="border border-white/30 px-1 py-0.5 text-[9px] rounded-sm text-white/50 uppercase leading-none">HD</span>
               </div>
               
+              {(movie.tagline) && (
+                <p className="text-xl md:text-2xl text-white/60 font-light italic">"{movie.tagline}"</p>
+              )}
+              
               <p className="text-lg md:text-xl text-white/90 leading-relaxed font-light">
-                {movie.description}
+                {movie.overview || movie.description}
               </p>
-            </div>
 
-            <div className="space-y-4 text-xs md:text-sm">
-              {movie.cast && (
-                <div className="leading-relaxed">
-                  <span className="text-white/40 font-medium">Cast:</span>{' '}
-                  <span className="text-white/80">{movie.cast}</span>
+              {movie.notes && (
+                <div className="bg-white/5 border border-white/10 p-6 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Why Watch It?</h4>
+                  <p className="text-white/80 leading-relaxed text-sm">{movie.notes}</p>
                 </div>
               )}
-              {movie.director && (
+            </div>
+            <div className="space-y-8 text-xs md:text-sm">
+              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-white/50 mb-4">Where to Watch</h4>
+                {movie.tmdb_id ? (
+                  <WhereToWatch tmdbId={movie.tmdb_id} title={movie.title} />
+                ) : (
+                  <div className="text-white/50">Tracking data not available.</div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                {movie.cast && (
+                  <div className="leading-relaxed">
+                    <span className="text-white/40 font-medium block mb-1">Cast</span>
+                    <span className="text-white/80">{movie.cast}</span>
+                  </div>
+                )}
+                {movie.director && (
+                  <div className="leading-relaxed">
+                    <span className="text-white/40 font-medium block mb-1">Director</span>
+                    <span className="text-white/80">{movie.director}</span>
+                  </div>
+                )}
                 <div className="leading-relaxed">
-                  <span className="text-white/40 font-medium">Director:</span>{' '}
-                  <span className="text-white/80">{movie.director}</span>
+                  <span className="text-white/40 font-medium block mb-1">Genres</span>
+                  <span className="text-white/80">{movie.genres?.join(', ') || movie.category}</span>
                 </div>
-              )}
-              <div className="leading-relaxed">
-                <span className="text-white/40 font-medium">Genres:</span>{' '}
-                <span className="text-white/80">{movie.category}</span>
               </div>
             </div>
           </div>
-
           {/* Trailer Section */}
           {movie.trailerUrl && (
             <div id="trailer-section" className="space-y-6 pt-4">

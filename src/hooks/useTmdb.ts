@@ -30,7 +30,7 @@ export function useTmdb<T = any>(key: string, fn: () => Promise<T>, ttlMs = 6 * 
       });
       
     return () => { alive = false; };
-  }, [key]); // We rely on key to trigger updates if fn reference changes
+  }, [key]);
 
   return state;
 }
