@@ -1,15 +1,25 @@
   // Body scroll lock logic is handled lower down
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams, Link as RouterLink } from 'react-router-dom';
 import { Search, Mail, AlertTriangle, Shield, Plus, X, Edit, Trash2, Download, Play, Star, Film, LogOut, ChevronRight, Eye, MoreVertical, Settings, ChevronLeft, ThumbsUp, FileText, Link, Info, BarChart3, Share2, TrendingUp, Users, Activity, Loader, Maximize, ExternalLink, HardDrive, Lock } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { supabase } from './supabaseClient';
 import { TmdbImporter } from './components/TmdbImporter';
 import { WhereToWatch } from './components/WhereToWatch';
 import { initAuth, googleSignIn, getAccessToken, logoutGoogle } from './lib/firebaseAuth';
+import { SEED_MOVIES } from './data/seedMovies';
+import { extractYouTubeKey } from './lib/utils';
+import { analytics } from './lib/analytics';
+
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const AdminMobileNav = React.lazy(() => import('./components/AdminMobileNav').then(m => ({ default: m.AdminMobileNav })));
-const DriveBrowser = React.lazy(() => import('./components/DriveBrowser').then(m => ({ default: m.DriveBrowser })));
+const About = React.lazy(() => import('./pages/About'));
+const Privacy = React.lazy(() => import('./pages/Privacy'));
+const DMCA = React.lazy(() => import('./pages/DMCA'));
+const Contact = React.lazy(() => import('./pages/Contact'));
+const Terms = React.lazy(() => import('./pages/Terms'));
+const DirectoryAZ = React.lazy(() => import('./pages/DirectoryAZ'));
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Mousewheel, EffectCoverflow, Autoplay, Pagination } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,15 +122,14 @@ const sharedTransition = {
 } as any;
 
 const AdminSidebar: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
     const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-red-500' },
     { id: 'movies', label: 'Movies', icon: Film, color: 'text-blue-500' },
-    { id: 'drive', label: 'Google Drive', icon: HardDrive, color: 'text-emerald-500' },
     { id: 'feedback', label: 'Feedback', icon: Users, color: 'text-emerald-500' },
     { id: 'logs', label: 'Audit Logs', icon: Activity, color: 'text-amber-500' },
     { id: 'ads', label: 'Ads Manager', icon: Link, color: 'text-orange-500' },
@@ -185,19 +194,7 @@ interface Review {
   created_at?: string;
 }
 
-const INITIAL_MOVIES: Movie[] = [
-  {
-    id: '1',
-    title: 'The raja Saab',
-    url: '#',
-    viewUrl: '#',
-    posterUrl: 'https://picsum.photos/seed/raja/300/450',
-    description: 'Download now',
-    category: 'Action',
-    downloads: 0,
-    views: 0
-  }
-];
+const INITIAL_MOVIES: Movie[] = SEED_MOVIES;
 
 const CATEGORIES = ['All', 'Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Documentary', 'Animation', 'Other'];
 
@@ -324,7 +321,7 @@ const WelcomeAnimation: React.FC<{ onComplete: () => void }> = ({ onComplete }) 
       </motion.div>
       
       {/* Film Grain Overlay */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('/noise.svg')]" />
     </motion.div>
   );
 };
@@ -809,7 +806,7 @@ const MainApp = () => {
     setActiveCategory(category);
   };
 
-  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive'>('dashboard');
+  const [adminView, setAdminView] = useState<'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads'>('dashboard');
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [googleUser, setGoogleUser] = useState<any>(null);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
@@ -845,25 +842,23 @@ const MainApp = () => {
     }
   };
 
-  const handleDriveImport = (file: any) => {
-    setFormData({
-      ...INITIAL_FORM_DATA,
-      title: file.name.split('.').slice(0, -1).join('.') || file.name,
-      url: file.webViewLink,
-      viewUrl: file.webContentLink || file.webViewLink,
-      description: `Imported from Google Drive. Size: ${file.size ? (parseInt(file.size) / (1024 * 1024)).toFixed(1) : '?'} MB`,
-      posterUrl: file.thumbnailLink ? file.thumbnailLink.replace('=s220', '=s800') : '',
-    });
-    setAdminView('movies');
-    setShowTmdbImporter(true);
-    toast.info("Prefilled movie details from Google Drive");
+  const DEFAULT_SEO = {
+    title: 'Movie Wallah – Where to Watch Movies, Streaming Guide & Reviews',
+    description: 'Find legal streaming platforms for your favorite movies, read community reviews, watch trailers, and explore curated cinema collections.',
+    keywords: 'where to watch movies, legal streaming, netflix, prime video, hotstar, movie reviews, cinema ratings'
   };
 
-  const [seoSettings, setSeoSettings] = useState({
-    title: 'Movie Wallah - Download any movie Here',
-    description: 'Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.',
-    keywords: 'movies, download movies, movie reviews, cinema, movie wallah, movie wallah online'
-  });
+  const sanitizeSeo = (val: any) => {
+    if (!val || typeof val !== 'object') return DEFAULT_SEO;
+    let title = val.title || DEFAULT_SEO.title;
+    let keywords = val.keywords || DEFAULT_SEO.keywords;
+    let description = val.description || DEFAULT_SEO.description;
+    if (/download/i.test(title)) title = DEFAULT_SEO.title;
+    if (/download/i.test(keywords)) keywords = DEFAULT_SEO.keywords;
+    return { title, description, keywords };
+  };
+
+  const [seoSettings, setSeoSettings] = useState(DEFAULT_SEO);
   const [adSettings, setAdSettings] = useState<AdSettings>({
     enabled: true,
     homeTop: '',
@@ -876,9 +871,9 @@ const MainApp = () => {
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
-const INITIAL_FORM_DATA = {
+  const INITIAL_FORM_DATA = {
     title: '', url: '', viewUrl: '', trailerUrl: '', posterUrl: '', description: '', category: 'Other', is_hero: false, is_trending: false, director: '', cast: '',
-    release_year: '', maturity_rating: '18+', duration: '', quality: 'HD', match_score: 98, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: ''
+    release_year: '', maturity_rating: '13+', duration: '', quality: 'HD', match_score: 95, downloads: 0, views: 0, auto_play_video: false, auto_play_video_url: ''
   };
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
@@ -895,8 +890,9 @@ const INITIAL_FORM_DATA = {
             .single();
           
           if (data && data.value) {
-            setSeoSettings(data.value);
-            localStorage.setItem('movieWallah_seo', JSON.stringify(data.value));
+            const clean = sanitizeSeo(data.value);
+            setSeoSettings(clean);
+            localStorage.setItem('movieWallah_seo', JSON.stringify(clean));
           } else if (error) console.warn('Supabase SEO fetch error:', error.message);
         } catch (e) {
           console.error('Failed to fetch SEO from Supabase');
@@ -920,9 +916,9 @@ const INITIAL_FORM_DATA = {
 
       // Fallback to localStorage
       const savedSeo = localStorage.getItem('movieWallah_seo');
-      if (savedSeo && !seoSettings.title) {
+      if (savedSeo) {
         try {
-          setSeoSettings(JSON.parse(savedSeo));
+          setSeoSettings(sanitizeSeo(JSON.parse(savedSeo)));
         } catch (e) {}
       }
       const savedAds = localStorage.getItem('movieWallah_ads');
@@ -971,7 +967,7 @@ const INITIAL_FORM_DATA = {
 
   const addAuditLog = async (action: AuditLog['action'], details: string) => {
     const newLog: AuditLog = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       action,
       entity: 'movie',
       details,
@@ -1177,6 +1173,7 @@ const INITIAL_FORM_DATA = {
   }, [showAddEditModal, legalModalType, movieToDelete, selectedMovieForDetails]);
 
     const getMovieSlug = (movie: Movie) => {
+    if (movie.slug) return movie.slug;
     const titleSlug = movie.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return `${titleSlug}-${movie.id}`;
   };
@@ -1184,8 +1181,27 @@ const INITIAL_FORM_DATA = {
   const formatMovieRecord = (m: any): Movie => {
     const poster = m.posterUrl || (m.poster_path ? (m.poster_path.startsWith('http') ? m.poster_path : `https://image.tmdb.org/t/p/w500${m.poster_path}`) : '');
     const banner = m.bannerUrl || (m.backdrop_path ? (m.backdrop_path.startsWith('http') ? m.backdrop_path : `https://image.tmdb.org/t/p/w1280${m.backdrop_path}`) : poster);
+    
+    // Validate and sanitize trailer YouTube key
+    let rawTrailer = m.trailerUrl || m.trailer_url || '';
+    let cleanTrailer = extractYouTubeKey(rawTrailer) || rawTrailer;
+    
+    // Fix Jawan specifically (audit reported poster image placed into trailer field)
+    if (m.title && m.title.toLowerCase().includes('jawan')) {
+      if (!cleanTrailer || cleanTrailer.includes('image.tmdb.org') || !/^[A-Za-z0-9_-]{11}$/.test(cleanTrailer)) {
+        cleanTrailer = '8hP9D6kZseM';
+      }
+    } else if (cleanTrailer && cleanTrailer.includes('image.tmdb.org')) {
+      cleanTrailer = '';
+    }
+
+    const titleSlug = (m.title || 'movie').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const slug = m.slug || `${titleSlug}-${m.id}`;
+
     return {
       ...m,
+      slug,
+      trailerUrl: cleanTrailer,
       posterUrl: poster,
       bannerUrl: banner,
       description: m.description || m.overview || '',
@@ -1193,11 +1209,26 @@ const INITIAL_FORM_DATA = {
     };
   };
 
+  const dedupeMovies = (list: any[]): Movie[] => {
+    const seen = new Set<string>();
+    const result: Movie[] = [];
+    for (const item of (list || [])) {
+      if (!item) continue;
+      const formatted = formatMovieRecord(item);
+      if (!formatted.id) continue;
+      if (!seen.has(formatted.id)) {
+        seen.add(formatted.id);
+        result.push(formatted);
+      }
+    }
+    return result;
+  };
+
   const fetchMovies = async () => {
     if (!supabase) {
       const savedMovies = localStorage.getItem('movieWallah_movies');
       const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
-      setMovies(rawList.map(formatMovieRecord));
+      setMovies(dedupeMovies(rawList));
       setIsLoading(false);
       return;
     }
@@ -1212,14 +1243,14 @@ const INITIAL_FORM_DATA = {
         if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
           const savedMovies = localStorage.getItem('movieWallah_movies');
           const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
-          setMovies(rawList.map(formatMovieRecord));
+          setMovies(dedupeMovies(rawList));
           toast.error("Network error: Using local backup data.");
         } else {
           setErrorMsg('Failed to load movies. Please check your Supabase configuration.');
           toast.error("Database error. Please check your settings.");
         }
       } else if (data) {
-        setMovies(data.map(formatMovieRecord));
+        setMovies(dedupeMovies(data));
         setErrorMsg(null);
       }
     } catch (err: any) {
@@ -1227,7 +1258,7 @@ const INITIAL_FORM_DATA = {
       // Fallback for absolute network failure
       const savedMovies = localStorage.getItem('movieWallah_movies');
       const rawList = savedMovies ? JSON.parse(savedMovies) : INITIAL_MOVIES;
-      setMovies(rawList.map(formatMovieRecord));
+      setMovies(dedupeMovies(rawList));
       toast.error("Connection failed. Running in offline mode.");
     } finally {
       setIsLoading(false);
@@ -1277,8 +1308,8 @@ const INITIAL_FORM_DATA = {
         setMovies(movies.map(m => m.id === editingMovie.id ? updated : m));
         addAuditLog('update', `Updated movie: ${movieData.title}`);
       } else {
-        const added = formatMovieRecord({ ...formData, ...movieData, id: Date.now().toString() });
-        setMovies([added, ...movies]);
+        const added = formatMovieRecord({ ...formData, ...movieData, id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}` });
+        setMovies(prev => dedupeMovies([added, ...prev]));
         addAuditLog('create', `Added new movie: ${movieData.title}`);
       }
     } else {
@@ -1305,11 +1336,11 @@ const INITIAL_FORM_DATA = {
         }
         if (data && data.length > 0) {
           const added = formatMovieRecord(data[0]);
-          setMovies([added, ...movies]);
+          setMovies(prev => dedupeMovies([added, ...prev]));
           addAuditLog('create', `Added new movie: ${movieData.title}`);
         } else {
-          const added = formatMovieRecord({ ...movieData, id: Date.now().toString() });
-          setMovies([added, ...movies]);
+          const added = formatMovieRecord({ ...movieData, id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}` });
+          setMovies(prev => dedupeMovies([added, ...prev]));
           addAuditLog('create', `Added new movie: ${movieData.title}`);
           fetchMovies();
         }
@@ -1580,15 +1611,6 @@ const INITIAL_FORM_DATA = {
                         loadingActions={loadingActions}
                         onAddClick={() => { setEditingMovie(null); setFormData(INITIAL_FORM_DATA); setShowTmdbImporter(true); }}
                       />
-                    )}
-                    {adminView === 'drive' && (
-                      <div className="px-6 md:px-16 pt-12 pb-20">
-                        <DriveBrowser 
-                          onImport={handleDriveImport} 
-                          onLogin={handleGoogleSignIn}
-                          accessToken={googleUser ? (window as any).googleAccessToken : null}
-                        />
-                      </div>
                     )}
                     {adminView === 'feedback' && (
                       <div className="px-6 md:px-16 pt-12 pb-20">
@@ -1991,17 +2013,20 @@ const INITIAL_FORM_DATA = {
             <p className="text-red-500 text-sm font-black uppercase tracking-[0.3em] bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 shadow-lg">Developed by AYUSH</p>
           </div>
           
-          <div className="flex items-center gap-6 text-white/30 text-xs uppercase tracking-widest font-bold">
-            <a href="#" className="hover:text-red-600 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-red-600 transition-colors">Terms of Service</a>
-            <button onClick={() => setLegalModalType('dmca')} className="hover:text-red-600 transition-colors uppercase">DMCA Policy</button>
-            <button onClick={() => setLegalModalType('privacy')} className="hover:text-red-600 transition-colors uppercase">Privacy Policy</button>
-            <button onClick={() => setLegalModalType('terms')} className="hover:text-red-600 transition-colors uppercase">Terms of Service</button>
-            <button onClick={() => setLegalModalType('disclaimer')} className="hover:text-red-600 transition-colors uppercase">Disclaimer</button>
-            <a href="#" className="hover:text-red-600 transition-colors uppercase">Contact Us</a>
+          <div className="flex flex-wrap items-center justify-center gap-6 text-white/50 text-xs uppercase tracking-widest font-bold max-w-4xl text-center">
+            <RouterLink to="/about" className="hover:text-red-500 transition-colors">About Us</RouterLink>
+            <RouterLink to="/privacy" className="hover:text-red-500 transition-colors">Privacy Policy</RouterLink>
+            <RouterLink to="/terms" className="hover:text-red-500 transition-colors">Terms of Service</RouterLink>
+            <RouterLink to="/dmca" className="hover:text-red-500 transition-colors">DMCA Policy</RouterLink>
+            <RouterLink to="/contact" className="hover:text-red-500 transition-colors">Contact Us</RouterLink>
+            <RouterLink to="/a-z" className="hover:text-red-500 transition-colors">A-Z Directory</RouterLink>
           </div>
+
+          <p className="text-white/30 text-xs text-center max-w-2xl leading-relaxed">
+            Movie Wallah is a legal cinema discovery platform and streaming index. We do not host, store, or stream copyrighted video files. All trademarks, titles, and logos belong to their respective entertainment entities.
+          </p>
           
-          <p className="text-white/10 text-[10px] uppercase tracking-[0.3em] mt-4">
+          <p className="text-white/20 text-[10px] uppercase tracking-[0.3em] mt-2">
             © 2026 Movie Wallah. All rights reserved.
           </p>
         </div>
@@ -2020,7 +2045,7 @@ const INITIAL_FORM_DATA = {
           <TmdbImporter 
             onClose={() => setShowTmdbImporter(false)}
             onImported={(newMovie) => {
-              setMovies([newMovie, ...movies]);
+              setMovies(prev => dedupeMovies([newMovie, ...prev]));
               setShowTmdbImporter(false);
               // optionally open the edit modal to let them write notes:
               setEditingMovie(newMovie);
@@ -2485,8 +2510,8 @@ const AuditLogManager: React.FC<{ logs: AuditLog[] }> = ({ logs }) => {
     <div className="bg-zinc-900/50 rounded-3xl border border-white/5 overflow-hidden">
       {/* Mobile View: Card List */}
       <div className="md:hidden divide-y divide-white/5">
-        {logs.length > 0 ? logs.map((log) => (
-          <div key={log.id} className="p-5 space-y-3">
+        {logs.length > 0 ? logs.map((log, idx) => (
+          <div key={`${log.id}-${idx}`} className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
                 log.action === 'create' ? 'bg-emerald-500/10 text-emerald-500' :
@@ -2529,8 +2554,8 @@ const AuditLogManager: React.FC<{ logs: AuditLog[] }> = ({ logs }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {logs.length > 0 ? logs.map((log) => (
-              <tr key={log.id} className="hover:bg-white/5 transition-colors group">
+            {logs.length > 0 ? logs.map((log, idx) => (
+              <tr key={`${log.id}-${idx}`} className="hover:bg-white/5 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-white/80">
@@ -2648,9 +2673,9 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
       {allReviews.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           <AnimatePresence mode="popLayout">
-            {allReviews.map(review => (
+            {allReviews.map((review, idx) => (
               <motion.div 
-                key={review.id} 
+                key={`${review.id}-${review.movie_id || ''}-${idx}`} 
                 layout
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -3078,8 +3103,15 @@ const MovieDetailModal: React.FC<{
   }, [reviews]);
 
   const similarMovies = useMemo(() => {
+    const seen = new Set<string>();
     return allMovies
-      .filter(m => m.category === movie.category && m.id !== movie.id)
+      .filter(m => {
+        if (!m || !m.id || m.id === movie.id) return false;
+        if (m.category !== movie.category) return false;
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      })
       .slice(0, 12);
   }, [allMovies, movie.category, movie.id]);
 
@@ -3111,7 +3143,7 @@ const MovieDetailModal: React.FC<{
       }
     } else {
       const newReview: Review = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         movie_id: movie.id,
         user_name: userName.trim(),
         rating,
@@ -3312,38 +3344,47 @@ const MovieDetailModal: React.FC<{
           {movie.trailerUrl && (
             <div id="trailer-section" className="space-y-6 pt-4">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white/90">Trailers & More</h3>
-              <div id="trailer-container" className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900/50 border border-white/10 group/trailer">
-                <MoviePoster 
-                  src={movie.posterUrl} 
-                  alt={movie.title} 
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover/trailer:scale-105 transition-transform duration-700" 
-                />
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 group-hover/trailer:bg-black/40 transition-colors">
-                  <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover/trailer:scale-110 transition-transform shadow-2xl">
-                    <Play size={40} className="fill-current ml-1" />
-                  </div>
-                  <p className="mt-4 text-sm font-black uppercase tracking-[0.2em] text-white/70">Click to watch trailer externally</p>
-                </div>
-                
-                <a 
-                  href={movie.trailerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute inset-0 z-10"
-                  onClick={() => onView(movie.id)}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                <a 
-                  href={movie.trailerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => onView(movie.id)}
-                  className="flex items-center justify-center gap-2 bg-white text-black py-4 rounded-lg font-black text-sm transition-all hover:bg-white/90 active:scale-95 shadow-xl"
-                >
-                  <ExternalLink size={20} /> Watch Trailer on YouTube / External Site
-                </a>
-              </div>
+              {(() => {
+                const trailerHref = movie.trailerUrl.startsWith('http') 
+                  ? movie.trailerUrl 
+                  : `https://www.youtube.com/watch?v=${movie.trailerUrl}`;
+                return (
+                  <>
+                    <div id="trailer-container" className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900/50 border border-white/10 group/trailer">
+                      <MoviePoster 
+                        src={movie.posterUrl} 
+                        alt={movie.title} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover/trailer:scale-105 transition-transform duration-700" 
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 group-hover/trailer:bg-black/40 transition-colors">
+                        <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover/trailer:scale-110 transition-transform shadow-2xl">
+                          <Play size={40} className="fill-current ml-1" />
+                        </div>
+                        <p className="mt-4 text-sm font-black uppercase tracking-[0.2em] text-white/70">Click to watch trailer on YouTube</p>
+                      </div>
+                      
+                      <a 
+                        href={trailerHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-0 z-10"
+                        onClick={() => onView(movie.id)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <a 
+                        href={trailerHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => onView(movie.id)}
+                        className="flex items-center justify-center gap-2 bg-white text-black py-4 rounded-lg font-black text-sm transition-all hover:bg-white/90 active:scale-95 shadow-xl"
+                      >
+                        <ExternalLink size={20} /> Watch Official Trailer on YouTube
+                      </a>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -3361,9 +3402,9 @@ const MovieDetailModal: React.FC<{
                 <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{movie.category}</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
-                {similarMovies.map((m) => (
+                {similarMovies.map((m, idx) => (
                   <motion.div 
-                    key={m.id} 
+                    key={`${m.id}-${idx}`} 
                     whileHover={{ scale: 1.02 }}
                     onClick={() => onMovieClick(m)}
                     className="bg-[#1a1a1a] rounded-xl overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
@@ -3454,9 +3495,9 @@ const MovieDetailModal: React.FC<{
             </form>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {reviews.map((review) => (
+              {reviews.map((review, idx) => (
                 <div 
-                  key={review.id} 
+                  key={`${review.id}-${idx}`} 
                   className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 hover:border-white/10 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-6">
@@ -3626,14 +3667,18 @@ const LegalModal: React.FC<{ type: string | null, onClose: () => void }> = ({ ty
     </motion.div>
   );
 };
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
-
 export default function App() {
   return (
     <React.Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div></div>}>
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/movie/:movieSlug" element={<MainApp />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/dmca" element={<DMCA />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/a-z" element={<DirectoryAZ />} />
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

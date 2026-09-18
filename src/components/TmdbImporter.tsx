@@ -147,8 +147,8 @@ export const TmdbImporter: React.FC<{
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {results.map(r => (
-              <div key={r.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
+            {results.map((r, idx) => (
+              <div key={`${r.id}-${idx}`} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
                 <div className="w-16 h-24 bg-zinc-800 rounded-lg shrink-0 overflow-hidden">
                   {r.poster_path ? (
                     <img src={IMG(r.poster_path, 'w185')} alt={r.title} className="w-full h-full object-cover" />

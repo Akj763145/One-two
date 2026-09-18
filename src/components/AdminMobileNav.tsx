@@ -3,16 +3,16 @@ import { motion } from 'framer-motion';
 import { BarChart3, Film, HardDrive, Users, Settings, Plus, LogOut, Link, Activity } from 'lucide-react';
 
 export const AdminMobileNav: React.FC<{
-  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive',
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
+  activeTab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads',
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
   onAddClick: () => void,
   onLogout: () => void
 }> = ({ activeTab, setActiveTab, onAddClick, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Stats', icon: BarChart3 },
     { id: 'movies', label: 'Movies', icon: Film },
-    { id: 'drive', label: 'Cloud', icon: HardDrive },
     { id: 'feedback', label: 'Feed', icon: Users },
+    { id: 'logs', label: 'Logs', icon: Activity },
     { id: 'settings', label: 'Cfg', icon: Settings },
   ] as const;
 

@@ -12,19 +12,17 @@ const Dashboard: React.FC<{
   movies: Movie[],
   onEdit: (m: Movie) => void,
   onDelete: (id: string) => void,
-  onDownload: (id: string) => void,
+  onDownload?: (id: string) => void,
   onView: (id: string) => void,
   onShowDetails: (m: Movie) => void,
   searchQuery: string,
-  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads' | 'drive') => void,
+  setActiveTab: (tab: 'dashboard' | 'movies' | 'feedback' | 'settings' | 'logs' | 'ads') => void,
   loadingActions?: Record<string, boolean>
-}> = ({ movies, onEdit, onDelete, onDownload, onView, onShowDetails, searchQuery, setActiveTab, loadingActions = {} }) => {
+}> = ({ movies, onEdit, onDelete, onView, onShowDetails, searchQuery, setActiveTab, loadingActions = {} }) => {
   const stats = useMemo(() => {
     const totalMovies = movies.length;
-
-
     const totalViews = movies.reduce((sum, m) => sum + (m.views || 0), 0);
-    const totalDownloads = movies.reduce((sum, m) => sum + (m.downloads || 0), 0);
+    const publishedCount = movies.filter(m => m.is_published !== false).length;
     
     // Group movies by month for the chart
     const monthlyData: { [key: string]: number } = {};
@@ -52,7 +50,7 @@ const Dashboard: React.FC<{
       movies: count
     }));
 
-    return { totalMovies, totalViews, totalDownloads, chartData };
+    return { totalMovies, totalViews, publishedCount, chartData };
   }, [movies]);
 
   const recentMovies = useMemo(() => {
@@ -100,7 +98,7 @@ const Dashboard: React.FC<{
           </div>
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Views</p>
           <h3 className="text-5xl font-black text-blue-400 mb-1">{stats.totalViews.toLocaleString()}</h3>
-          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Across all content</p>
+          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Across all catalog content</p>
         </motion.div>
 
         <motion.div 
@@ -110,11 +108,11 @@ const Dashboard: React.FC<{
           className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 relative overflow-hidden group"
         >
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Download size={80} />
+            <Shield size={80} />
           </div>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Total Downloads</p>
-          <h3 className="text-5xl font-black text-emerald-400 mb-1">{stats.totalDownloads.toLocaleString()}</h3>
-          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Direct user engagement</p>
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Published Titles</p>
+          <h3 className="text-5xl font-black text-emerald-400 mb-1">{stats.publishedCount.toLocaleString()}</h3>
+          <p className="text-white/20 text-[10px] font-bold uppercase tracking-wider">Active streaming guides</p>
         </motion.div>
       </div>
 
@@ -202,9 +200,9 @@ const Dashboard: React.FC<{
           </div>
 
           <div className="space-y-4">
-            {recentMovies.map(movie => (
+            {recentMovies.map((movie, idx) => (
               <div 
-                key={movie.id} 
+                key={`${movie.id}-${idx}`} 
                 onClick={() => onShowDetails(movie)}
                 className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
               >
@@ -239,10 +237,12 @@ const Dashboard: React.FC<{
                     <p className="text-xs font-black">{movie.views || 0}</p>
                     <p className="text-[8px] text-white/30 uppercase">Views</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs font-black">{movie.downloads || 0}</p>
-                    <p className="text-[8px] text-white/30 uppercase">DLs</p>
-                  </div>
+                  {movie.vote_average && (
+                    <div className="text-center">
+                      <p className="text-xs font-black text-amber-400">{movie.vote_average.toFixed(1)}</p>
+                      <p className="text-[8px] text-white/30 uppercase">Rating</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

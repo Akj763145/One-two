@@ -37,16 +37,16 @@ export const WhereToWatch: React.FC<{ tmdbId: number; title: string }> = ({ tmdb
 
   return (
     <div className="flex flex-col gap-4">
-      {groups.map(({ kind, list, label }) => (
-        <div key={kind} className="flex flex-col gap-2">
+      {groups.map(({ kind, list, label }, gIdx) => (
+        <div key={`${kind}-${gIdx}`} className="flex flex-col gap-2">
           <span className="text-xs font-bold uppercase tracking-widest text-white/50">{label}</span>
           <div className="flex flex-wrap gap-3">
-            {list.map((p: any) => {
+            {list.map((p: any, pIdx: number) => {
               const a = AFFILIATES[p.provider_name];
               const outUrl = a ? a.url(title) : `https://www.google.com/search?q=${encodeURIComponent(p.provider_name + " " + title)}`;
               return (
                 <a 
-                  key={p.provider_id}
+                  key={`${kind}-${p.provider_id || p.provider_name || 'prov'}-${pIdx}`}
                   href={outUrl}
                   target="_blank" 
                   rel="sponsored noopener noreferrer"

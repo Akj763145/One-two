@@ -4,29 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#ff0000" />
-    <title>Movie Wallah - Download any movie Here</title>
-    <meta name="description" content="Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.">
-    <meta name="keywords" content="movies, download movies, movie reviews, cinema, movie wallah, movie wallah online">
+    <link rel="canonical" href="https://moviewallah.online/" />
+    <meta name="theme-color" content="#e50914" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MovieWallah" />
+
+    <title>Movie Wallah – Where to Watch Movies, Streaming Guide &amp; Reviews</title>
+    <meta name="description" content="Discover where to watch movies online legally. Browse streaming platforms, watch official trailers, and read community cinema reviews on Movie Wallah." />
+    <meta name="keywords" content="where to watch movies, streaming guide, ott releases, netflix, prime video, hotstar, movie reviews, cinema ratings" />
     
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://moviewallah.online/">
-    <meta property="og:title" content="Movie Wallah - Download any movie Here">
-    <meta property="og:description" content="Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.">
-    <meta property="og:image" content="https://moviewallah.online/favicon.svg">
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Movie Wallah" />
+    <meta property="og:url" content="https://moviewallah.online/" />
+    <meta property="og:title" content="Movie Wallah – Where to Watch Movies, Streaming Guide &amp; Reviews" />
+    <meta property="og:description" content="Discover where to watch movies online legally. Browse streaming platforms, watch official trailers, and read community cinema reviews on Movie Wallah." />
+    <meta property="og:image" content="https://moviewallah.online/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://moviewallah.online/">
-    <meta property="twitter:title" content="Movie Wallah - Download any movie Here">
-    <meta property="twitter:description" content="Welcome to Movie Wallah. Discover the latest movie reviews, in-depth analysis, and updates on your favorite cinema.">
-    <meta property="twitter:image" content="https://moviewallah.online/favicon.svg">
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://moviewallah.online/" />
+    <meta name="twitter:title" content="Movie Wallah – Where to Watch Movies, Streaming Guide &amp; Reviews" />
+    <meta name="twitter:description" content="Discover where to watch movies online legally. Browse streaming platforms, watch official trailers, and read community cinema reviews on Movie Wallah." />
+    <meta name="twitter:image" content="https://moviewallah.online/og-image.png" />
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Movie Wallah",
+      "url": "https://moviewallah.online/",
+      "description": "Discover where to watch movies online legally, explore official trailers, ratings, reviews, and streaming platform guides.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://moviewallah.online/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
-

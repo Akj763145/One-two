@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { google } from "googleapis";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
@@ -171,6 +170,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Security Headers Middleware
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (process.env.NODE_ENV === "production") {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    }
+    next();
+  });
+
   // Server-side TMDb proxy and smart Gemini fallback endpoints
   app.get("/api/tmdb/*", async (req, res) => {
     const apiPath = req.path.replace("/api/tmdb", "");
@@ -256,31 +266,9 @@ async function startServer() {
     }
   });
 
-  // API Route to list video files from Google Drive
-  app.get("/api/drive/list", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const accessToken = authHeader.split(" ")[1];
-    const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: accessToken });
-
-    const drive = google.drive({ version: "v3", auth: oauth2Client });
-
-    try {
-      const response = await drive.files.list({
-        q: "mimeType contains 'video/' and trashed = false",
-        fields: "files(id, name, mimeType, thumbnailLink, webViewLink, webContentLink, size, createdTime)",
-        pageSize: 100,
-      });
-
-      res.json(response.data.files);
-    } catch (error: any) {
-      console.error("Drive API Error:", error);
-      res.status(500).json({ error: error.message || "Failed to fetch files from Drive" });
-    }
+  // Fallback endpoint for similar/credits/etc.
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
   // API Route for fallback admin login
