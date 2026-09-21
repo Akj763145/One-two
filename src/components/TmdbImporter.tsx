@@ -126,11 +126,7 @@ export const TmdbImporter: React.FC<{
           posterUrl: posterFull,
           bannerUrl: bannerFull
         };
-
-        // Decouple the onImported call to prevent parent re-renders from blocking this modal's unmount or completion
-        setTimeout(() => {
-          onImported(movieToEmit);
-        }, 100);
+        onImported(movieToEmit);
       } else {
         newMovie.id = Date.now().toString();
         toast.success(`Tracked ${d.title} (Local)`);
@@ -141,16 +137,13 @@ export const TmdbImporter: React.FC<{
           bannerUrl: bannerFull
         };
 
-        setTimeout(() => {
-          onImported(movieToEmit);
-        }, 100);
+        onImported(movieToEmit);
       }
     } catch (err: any) {
       console.error("TmdbImporter track error:", err);
       toast.error(err.message || "Failed to track movie");
     } finally {
-      // Small delay to ensure UI feels responsive before resetting state
-      setTimeout(() => setImportingId(null), 200);
+      setImportingId(null);
     }
   };
 
@@ -281,9 +274,15 @@ export const TmdbImporter: React.FC<{
 
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar relative">
             {importingId !== null && (
-              <div className="absolute inset-0 z-10 bg-black/20 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
-                <Loader2 className="animate-spin text-blue-500" size={40} />
-                <p className="text-sm font-medium text-white">Importing metadata...</p>
+              <div className="absolute inset-0 z-20 bg-zinc-950/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center p-8">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                  <Loader2 className="absolute inset-0 m-auto text-blue-500 animate-pulse" size={24} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-white">Importing Metadata</p>
+                  <p className="text-sm text-white/50">Processing movie details and saving to database...</p>
+                </div>
               </div>
             )}
             

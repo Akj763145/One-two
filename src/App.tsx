@@ -1515,9 +1515,9 @@ const MainApp = () => {
 
   const currentMovies = filteredMovies.slice(0, visibleCount);
 
-  const heroMovies = React.useMemo(() => dedupeMovies(movies.filter(m => m.is_hero)), [movies]);
-  const featuredMovies = React.useMemo(() => heroMovies.length > 0 ? heroMovies : dedupeMovies(movies.slice(0, 5)), [heroMovies, movies]);
-  const trendingMovies = React.useMemo(() => dedupeMovies(movies.filter(m => m.is_trending)), [movies]);
+  const heroMovies = React.useMemo(() => movies.filter(m => m.is_hero), [movies]);
+  const featuredMovies = React.useMemo(() => heroMovies.length > 0 ? heroMovies : movies.slice(0, 5), [heroMovies, movies]);
+  const trendingMovies = React.useMemo(() => movies.filter(m => m.is_trending), [movies]);
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-red-500/30 overflow-x-hidden dark">
@@ -2065,12 +2065,19 @@ const MainApp = () => {
           <TmdbImporter 
             onClose={() => setShowTmdbImporter(false)}
             onImported={(newMovie) => {
-              setMovies(prev => dedupeMovies([newMovie, ...prev]));
+              // Close the importer immediately to keep the UI responsive
               setShowTmdbImporter(false);
-              // optionally open the edit modal to let them write notes:
-              setEditingMovie(newMovie);
-              setFormData(newMovie);
-              setShowAddEditModal(true);
+              
+              // Process the new movie in the next tick
+              setTimeout(() => {
+                setMovies(prev => {
+                  const updated = dedupeMovies([newMovie, ...prev]);
+                  return updated;
+                });
+                setEditingMovie(newMovie);
+                setFormData(newMovie);
+                setShowAddEditModal(true);
+              }, 0);
             }}
           />
         )}
