@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Film, X, Loader2 } from 'lucide-react';
-import { tmdbSearch, tmdbDetails, tmdbVideos, IMG } from '../lib/tmdb';
+import { Search, Plus, Film, X, Loader2, KeyRound, ExternalLink, Check, AlertCircle } from 'lucide-react';
+import { tmdbSearch, tmdbDetails, tmdbVideos, IMG, getTmdbApiKey, setTmdbApiKey } from '../lib/tmdb';
 import { supabase } from '../supabaseClient';
 import { toast } from 'sonner';
 
@@ -13,16 +13,38 @@ export const TmdbImporter: React.FC<{
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [importingId, setImportingId] = useState<number | null>(null);
+  const [currentKey, setCurrentKey] = useState<string>(getTmdbApiKey());
+  const [inputKey, setInputKey] = useState<string>(getTmdbApiKey());
+  const [showKeyConfig, setShowKeyConfig] = useState<boolean>(!getTmdbApiKey());
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSaveKey = (e: React.FormEvent) => {
     e.preventDefault();
+    setTmdbApiKey(inputKey);
+    setCurrentKey(inputKey.trim());
+    toast.success("TMDb API key saved!");
+    setShowKeyConfig(false);
+    setSearchError(null);
+  };
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!query.trim()) return;
     setLoading(true);
+    setSearchError(null);
     try {
       const data = await tmdbSearch(query);
       setResults(data.results || []);
-    } catch (err) {
-      toast.error("Failed to search TMDb");
+      if (!data.results || data.results.length === 0) {
+        toast.info("No movies found matching that title.");
+      }
+    } catch (err: any) {
+      const msg = err.message || "Failed to search TMDb";
+      setSearchError(msg);
+      toast.error(msg);
+      if (!getTmdbApiKey()) {
+        setShowKeyConfig(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -113,10 +135,87 @@ export const TmdbImporter: React.FC<{
             </h2>
             <p className="text-sm text-white/50 mt-1">Search the official movie database to import metadata</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
-            <X />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowKeyConfig(!showKeyConfig)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                currentKey
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+              }`}
+              title="Configure TMDb API Key"
+            >
+              <KeyRound size={14} />
+              {currentKey ? 'API Key Active' : 'Set TMDb API Key'}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
+              <X />
+            </button>
+          </div>
         </div>
+
+        {/* API Key Configuration Card */}
+        {showKeyConfig && (
+          <div className="bg-blue-950/40 border-b border-blue-500/20 p-4 sm:p-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-blue-200 flex items-center gap-2">
+                    <KeyRound size={16} className="text-blue-400" />
+                    TMDb API Key (For Live & Static Hosting)
+                  </h4>
+                  <p className="text-xs text-white/60 mt-0.5">
+                    On static hosting like Render, entering your free TMDb API key allows the browser to search and import movies directly.
+                  </p>
+                </div>
+                <a
+                  href="https://www.themoviedb.org/settings/api"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 hover:underline shrink-0 ml-2"
+                >
+                  <span>Get free key</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+
+              <form onSubmit={handleSaveKey} className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputKey}
+                  onChange={e => setInputKey(e.target.value)}
+                  placeholder="Paste your TMDb API Key (v3 auth) here..."
+                  className="flex-1 bg-black/50 border border-white/15 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-blue-500 font-mono"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+                >
+                  <Check size={14} />
+                  Save Key
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Error message banner */}
+        {searchError && (
+          <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-center justify-between text-xs text-red-400">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{searchError}</span>
+            </div>
+            {!currentKey && (
+              <button
+                onClick={() => setShowKeyConfig(true)}
+                className="underline font-semibold hover:text-red-300"
+              >
+                Configure TMDb Key
+              </button>
+            )}
+          </div>
+        )}
         
         <div className="p-6 border-b border-white/10">
           <form onSubmit={handleSearch} className="relative">
@@ -147,8 +246,8 @@ export const TmdbImporter: React.FC<{
           )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {results.map((r, idx) => (
-              <div key={`${r.id}-${idx}`} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
+            {results.map((r) => (
+              <div key={r.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
                 <div className="w-16 h-24 bg-zinc-800 rounded-lg shrink-0 overflow-hidden">
                   {r.poster_path ? (
                     <img src={IMG(r.poster_path, 'w185')} alt={r.title} className="w-full h-full object-cover" />

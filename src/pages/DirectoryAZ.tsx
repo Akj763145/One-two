@@ -61,11 +61,11 @@ export default function DirectoryAZ() {
 
       {/* Movie List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredMovies.map((movie, idx) => {
+        {filteredMovies.map((movie) => {
           const slug = movie.slug || `${movie.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${movie.id}`;
           return (
             <Link
-              key={`${movie.id}-${idx}`}
+              key={movie.id}
               to={`/movie/${slug}`}
               className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-white/15 transition-all group"
             >

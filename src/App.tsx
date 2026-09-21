@@ -1777,7 +1777,7 @@ const MainApp = () => {
                   className="hero-swiper w-full h-full !px-4 md:!px-20"
                 >
                   {featuredMovies.map((movie, index) => (
-                    <SwiperSlide key={`${movie.id}-${index}`} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group transform-gpu">
+                    <SwiperSlide key={`hero-${movie.id}`} className="!w-[85vw] md:!w-[800px] !h-[55vh] md:!h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative group transform-gpu">
                       <div className="absolute inset-0">
                         <MoviePoster src={movie.posterUrl} alt={movie.title} className="hero-zoom-img h-full w-full object-cover" priority={index === 0} />
                       </div>
@@ -1890,10 +1890,10 @@ const MainApp = () => {
                               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
                             >
                               {isLoading ? (
-                                Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
+                                Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={`search-skel-${i}`} />)
                               ) : (
-                                currentMovies.map((movie, idx) => (
-                          <MovieCard key={`${movie.id}-${idx}`} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
+                                currentMovies.map((movie) => (
+                          <MovieCard key={movie.id} movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                                 ))
                               )}
                             </div>
@@ -1941,8 +1941,8 @@ const MainApp = () => {
                         modules={[FreeMode, Mousewheel]}
                         className="w-full !overflow-visible"
                       >
-                        {trendingMovies.map((movie, idx) => (
-                          <SwiperSlide key={`${movie.id}-${idx}`} className="!w-[160px] md:!w-[220px]">
+                        {trendingMovies.map((movie) => (
+                          <SwiperSlide key={`trending-${movie.id}`} className="!w-[160px] md:!w-[220px]">
                             <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                           </SwiperSlide>
                         ))}
@@ -1967,10 +1967,10 @@ const MainApp = () => {
                           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8"
                         >
                           {isLoading ? (
-                            Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={i} />)
+                            Array.from({ length: 10 }).map((_, i) => <MovieSkeleton key={`watch-next-skel-${i}`} />)
                           ) : (
                             currentMovies.map((movie, index) => (
-                              <React.Fragment key={`${movie.id}-${index}`}>
+                              <React.Fragment key={movie.id}>
                                 <MovieCard movie={movie} isAdmin={isAdmin} onEdit={handleEdit} onDelete={setMovieToDelete} onDownload={handleDownload} onView={handleView} onShowDetails={handleShowDetails} searchQuery={searchQuery} loadingActions={loadingActions} />
                                 {(index + 1) % 10 === 0 && index !== currentMovies.length - 1 && adSettings.enabled && adSettings.homeGridInline && (
                                   <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 w-full my-2 flex justify-center">
@@ -2469,9 +2469,9 @@ const MovieManagement: React.FC<{
 
       {filteredMovies.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-          {filteredMovies.map((movie, idx) => (
+          {filteredMovies.map((movie) => (
             <MovieCard 
-              key={`${movie.id}-${idx}`} 
+              key={movie.id} 
               movie={movie} 
               isAdmin={true} 
               onEdit={onEdit} 
@@ -2510,8 +2510,8 @@ const AuditLogManager: React.FC<{ logs: AuditLog[] }> = ({ logs }) => {
     <div className="bg-zinc-900/50 rounded-3xl border border-white/5 overflow-hidden">
       {/* Mobile View: Card List */}
       <div className="md:hidden divide-y divide-white/5">
-        {logs.length > 0 ? logs.map((log, idx) => (
-          <div key={`${log.id}-${idx}`} className="p-5 space-y-3">
+        {logs.length > 0 ? logs.map((log) => (
+          <div key={log.id} className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
                 log.action === 'create' ? 'bg-emerald-500/10 text-emerald-500' :
@@ -2554,8 +2554,8 @@ const AuditLogManager: React.FC<{ logs: AuditLog[] }> = ({ logs }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {logs.length > 0 ? logs.map((log, idx) => (
-              <tr key={`${log.id}-${idx}`} className="hover:bg-white/5 transition-colors group">
+            {logs.length > 0 ? logs.map((log) => (
+              <tr key={log.id} className="hover:bg-white/5 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-white/80">
@@ -2673,9 +2673,9 @@ const FeedbackManager: React.FC<{ movies: Movie[] }> = ({ movies }) => {
       {allReviews.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           <AnimatePresence mode="popLayout">
-            {allReviews.map((review, idx) => (
+            {allReviews.map((review) => (
               <motion.div 
-                key={`${review.id}-${review.movie_id || ''}-${idx}`} 
+                key={review.id} 
                 layout
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -3402,9 +3402,9 @@ const MovieDetailModal: React.FC<{
                 <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{movie.category}</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
-                {similarMovies.map((m, idx) => (
+                {similarMovies.map((m) => (
                   <motion.div 
-                    key={`${m.id}-${idx}`} 
+                    key={m.id} 
                     whileHover={{ scale: 1.02 }}
                     onClick={() => onMovieClick(m)}
                     className="bg-[#1a1a1a] rounded-xl overflow-hidden cursor-pointer group transition-all border border-white/5 hover:border-white/20"
@@ -3495,9 +3495,9 @@ const MovieDetailModal: React.FC<{
             </form>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {reviews.map((review, idx) => (
+              {reviews.map((review) => (
                 <div 
-                  key={`${review.id}-${idx}`} 
+                  key={review.id} 
                   className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 hover:border-white/10 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-6">

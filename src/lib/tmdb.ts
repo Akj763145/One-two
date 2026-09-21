@@ -1,6 +1,51 @@
 const BASE = "/api/tmdb";
 
+export function getTmdbApiKey(): string {
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('tmdb_api_key');
+    if (local && local.trim() && local !== 'YOUR_TMDB_API_KEY') return local.trim();
+  }
+  const envKey = (import.meta as any).env?.VITE_TMDB_API_KEY;
+  if (envKey && envKey.trim() && envKey !== 'YOUR_TMDB_API_KEY') return envKey.trim();
+  return '';
+}
+
+export function setTmdbApiKey(key: string): void {
+  if (typeof window !== 'undefined') {
+    if (key && key.trim()) {
+      localStorage.setItem('tmdb_api_key', key.trim());
+    } else {
+      localStorage.removeItem('tmdb_api_key');
+    }
+  }
+}
+
 async function tmdb(path: string, params: Record<string, string | number | boolean> = {}) {
+  const apiKey = getTmdbApiKey();
+
+  // If a client-side API key is available (either from localStorage or VITE_TMDB_API_KEY),
+  // call the official TMDb v3 API directly. TMDb supports client-side CORS.
+  if (apiKey) {
+    const url = new URL(`https://api.themoviedb.org/3${path}`);
+    url.searchParams.set('api_key', apiKey);
+    Object.entries(params).forEach(([k, v]) => {
+      url.searchParams.set(k, String(v));
+    });
+
+    try {
+      const r = await fetch(url.toString());
+      if (!r.ok) {
+        const errJson = await r.json().catch(() => ({}));
+        throw new Error(errJson.status_message || `TMDb API error (${r.status})`);
+      }
+      return await r.json();
+    } catch (error: any) {
+      console.error("Direct TMDb fetch error:", error);
+      throw error;
+    }
+  }
+
+  // Otherwise, attempt the backend proxy /api/tmdb
   const url = new URL(window.location.origin + BASE + path);
   Object.entries(params).forEach(
     ([k, v]) => url.searchParams.set(k, String(v))
@@ -8,9 +53,19 @@ async function tmdb(path: string, params: Record<string, string | number | boole
   
   try {
     const r = await fetch(url.toString());
-    if (!r.ok) throw new Error(`TMDb ${r.status}`);
+    const contentType = r.headers.get("content-type") || "";
+
+    // On static hosts (like Render Static Sites), unmatched routes return index.html
+    if (contentType.includes("text/html")) {
+      throw new Error("TMDb API Key required. On static hosting, please configure a free TMDb API key to search.");
+    }
+
+    if (!r.ok) {
+      const errJson = await r.json().catch(() => ({}));
+      throw new Error(errJson.error || `TMDb server responded with ${r.status}`);
+    }
     return await r.json();
-  } catch (error) {
+  } catch (error: any) {
     console.error("TMDb fetch error:", error);
     throw error;
   }

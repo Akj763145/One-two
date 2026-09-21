@@ -200,9 +200,9 @@ const Dashboard: React.FC<{
           </div>
 
           <div className="space-y-4">
-            {recentMovies.map((movie, idx) => (
+            {recentMovies.map((movie) => (
               <div 
-                key={`${movie.id}-${idx}`} 
+                key={movie.id} 
                 onClick={() => onShowDetails(movie)}
                 className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
               >
