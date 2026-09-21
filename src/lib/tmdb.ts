@@ -24,16 +24,26 @@ async function tmdb(path: string, params: Record<string, string | number | boole
   const apiKey = getTmdbApiKey();
 
   // If a client-side API key is available (either from localStorage or VITE_TMDB_API_KEY),
-  // call the official TMDb v3 API directly. TMDb supports client-side CORS.
+  // call the official TMDb v3/v4 API directly.
   if (apiKey) {
+    const isV4Token = apiKey.startsWith('ey') || apiKey.length > 60;
     const url = new URL(`https://api.themoviedb.org/3${path}`);
-    url.searchParams.set('api_key', apiKey);
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+
+    if (isV4Token) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    } else {
+      url.searchParams.set('api_key', apiKey);
+    }
+
     Object.entries(params).forEach(([k, v]) => {
       url.searchParams.set(k, String(v));
     });
 
     try {
-      const r = await fetch(url.toString());
+      const r = await fetch(url.toString(), { headers });
       if (!r.ok) {
         const errJson = await r.json().catch(() => ({}));
         throw new Error(errJson.status_message || `TMDb API error (${r.status})`);
@@ -41,6 +51,11 @@ async function tmdb(path: string, params: Record<string, string | number | boole
       return await r.json();
     } catch (error: any) {
       console.error("Direct TMDb fetch error:", error);
+      if (error.name === 'TypeError' && (error.message === 'Failed to fetch' || error.message.includes('fetch'))) {
+        throw new Error(
+          "Network request to TMDb was blocked (Failed to fetch). Possible causes: 1) Ad-blocker or Brave Shields blocking TMDb, 2) ISP DNS blocking api.themoviedb.org, 3) Pasted v4 token instead of v3 key, or 4) No internet connection."
+        );
+      }
       throw error;
     }
   }

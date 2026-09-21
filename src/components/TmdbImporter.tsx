@@ -201,19 +201,19 @@ export const TmdbImporter: React.FC<{
 
         {/* Error message banner */}
         {searchError && (
-          <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-center justify-between text-xs text-red-400">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0" />
-              <span>{searchError}</span>
+          <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-red-400">
+            <div className="flex items-start sm:items-center gap-2">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 sm:mt-0 text-red-400" />
+              <div className="leading-relaxed">
+                <span>{searchError}</span>
+              </div>
             </div>
-            {!currentKey && (
-              <button
-                onClick={() => setShowKeyConfig(true)}
-                className="underline font-semibold hover:text-red-300"
-              >
-                Configure TMDb Key
-              </button>
-            )}
+            <button
+              onClick={() => setShowKeyConfig(true)}
+              className="underline font-semibold hover:text-red-300 shrink-0 text-left sm:text-right ml-6 sm:ml-2"
+            >
+              {currentKey ? "Change / Re-enter Key" : "Configure TMDb Key"}
+            </button>
           </div>
         )}
         
