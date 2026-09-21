@@ -13,10 +13,11 @@ function spaFallbackPlugin(): Plugin {
       if (!fs.existsSync(indexPath)) return;
       const indexHtml = fs.readFileSync(indexPath, 'utf-8');
 
-      // 1. Generate 404.html for static hosting fallbacks
+      // 1. Generate 404.html for static hosting fallbacks (Render, Netlify, Cloudflare, GitHub Pages)
       fs.writeFileSync(path.join(dist, '404.html'), indexHtml);
 
-      // 2. Pre-generate physical folders with index.html for zero-config SPA routing
+      // 2. Generate clean URL HTML files (e.g. /adminlogin -> adminlogin.html)
+      // Render Static Sites natively match clean URLs to .html files
       const routes = [
         'adminlogin',
         'admilogin',
@@ -33,11 +34,16 @@ function spaFallbackPlugin(): Plugin {
       ];
 
       for (const route of routes) {
+        // Clean up any old directory if it exists to avoid directory lookup conflicts
         const routeDir = path.join(dist, route);
-        if (!fs.existsSync(routeDir)) {
-          fs.mkdirSync(routeDir, { recursive: true });
+        if (fs.existsSync(routeDir) && fs.statSync(routeDir).isDirectory()) {
+          try {
+            fs.rmSync(routeDir, { recursive: true, force: true });
+          } catch {}
         }
-        fs.writeFileSync(path.join(routeDir, 'index.html'), indexHtml);
+
+        // Write [route].html
+        fs.writeFileSync(path.join(dist, `${route}.html`), indexHtml);
       }
     }
   };
