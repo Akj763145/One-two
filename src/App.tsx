@@ -3680,6 +3680,11 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/a-z" element={<DirectoryAZ />} />
         <Route path="/adminlogin" element={<AdminLogin />} />
+        <Route path="/admilogin" element={<AdminLogin />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/login" element={<AdminLogin />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </React.Suspense>

@@ -1,12 +1,52 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import fs from 'fs';
+import {defineConfig, loadEnv, Plugin} from 'vite';
+
+function spaFallbackPlugin(): Plugin {
+  return {
+    name: 'spa-fallback-generator',
+    closeBundle() {
+      const dist = path.resolve(__dirname, 'dist');
+      const indexPath = path.join(dist, 'index.html');
+      if (!fs.existsSync(indexPath)) return;
+      const indexHtml = fs.readFileSync(indexPath, 'utf-8');
+
+      // 1. Generate 404.html for static hosting fallbacks
+      fs.writeFileSync(path.join(dist, '404.html'), indexHtml);
+
+      // 2. Pre-generate physical folders with index.html for zero-config SPA routing
+      const routes = [
+        'adminlogin',
+        'admilogin',
+        'ADMILOGIN',
+        'ADMINLOGIN',
+        'admin',
+        'login',
+        'about',
+        'privacy',
+        'dmca',
+        'terms',
+        'contact',
+        'a-z',
+      ];
+
+      for (const route of routes) {
+        const routeDir = path.join(dist, route);
+        if (!fs.existsSync(routeDir)) {
+          fs.mkdirSync(routeDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(routeDir, 'index.html'), indexHtml);
+      }
+    }
+  };
+}
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), spaFallbackPlugin()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

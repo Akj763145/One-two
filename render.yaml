@@ -1,20 +1,25 @@
 # Render Configuration for Movie Wallah
-# Option A: Full-Stack Express Server (Serves API proxy + SPA dist)
 services:
+  # Static Site Deployment (Default for frontend-only / SPA on Render)
   - type: web
-    name: moviewallah
-    env: node
-    plan: free
+    name: moviewallah-static
+    env: static
     buildCommand: npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 3000
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
-# Option B: Render Static Site (If deploying as Static Site)
-# routes:
-#   - type: rewrite
-#     source: /*
-#     destination: /index.html
+  # Full-Stack Web Service Option (If running with Node/Express backend)
+  # - type: web
+  #   name: moviewallah-server
+  #   env: node
+  #   plan: free
+  #   buildCommand: npm run build
+  #   startCommand: npm start
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: PORT
+  #       value: 3000
