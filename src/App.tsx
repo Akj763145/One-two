@@ -1495,9 +1495,9 @@ const MainApp = () => {
 
   const currentMovies = filteredMovies.slice(0, visibleCount);
 
-  const heroMovies = movies.filter(m => m.is_hero);
-  const featuredMovies = heroMovies.length > 0 ? heroMovies : movies.slice(0, 5);
-  const trendingMovies = movies.filter(m => m.is_trending);
+  const heroMovies = React.useMemo(() => dedupeMovies(movies.filter(m => m.is_hero)), [movies]);
+  const featuredMovies = React.useMemo(() => heroMovies.length > 0 ? heroMovies : dedupeMovies(movies.slice(0, 5)), [heroMovies, movies]);
+  const trendingMovies = React.useMemo(() => dedupeMovies(movies.filter(m => m.is_trending)), [movies]);
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-red-500/30 overflow-x-hidden dark">
@@ -1751,7 +1751,7 @@ const MainApp = () => {
                   grabCursor={true}
                   centeredSlides={true}
                   slidesPerView={'auto'}
-                  loop={true}
+                  loop={featuredMovies.length >= 3}
                   speed={700}
                   autoplay={{
                     delay: 4000,
