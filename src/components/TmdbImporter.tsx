@@ -90,33 +90,67 @@ export const TmdbImporter: React.FC<{
       };
 
       if (supabase) {
-        const { data, error } = await supabase.from('movies').upsert([newMovie], { onConflict: 'tmdb_id' }).select().single();
-        if (error) {
-          // If upsert fails (e.g. RLS on select), fallback to plain insert without single select or local
-          const fallbackInsert = await supabase.from('movies').insert([newMovie]);
-          if (fallbackInsert.error && !fallbackInsert.error.message.includes('unique')) {
-            throw fallbackInsert.error;
-          }
+        let insertedMovie: any = null;
+        try {
+          console.log("Starting Supabase upsert for movie:", d.title);
+          // Add a 6-second timeout promise for Supabase in case the network hangs
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Database operation timed out')), 6000)
+          );
+
+          const dbPromise = (async () => {
+            const { data, error } = await supabase.from('movies').upsert([newMovie], { onConflict: 'tmdb_id' }).select().single();
+            if (error) {
+              console.warn("Supabase upsert error, trying insert fallback:", error.message);
+              // If upsert fails (e.g. RLS on select or missing unique constraint), fallback to insert
+              const fallbackInsert = await supabase.from('movies').insert([newMovie]).select().single();
+              if (fallbackInsert.error && !fallbackInsert.error.message.includes('unique')) {
+                throw fallbackInsert.error;
+              }
+              return fallbackInsert.data || newMovie;
+            }
+            return data || newMovie;
+          })();
+
+          insertedMovie = await Promise.race([dbPromise, timeoutPromise]);
+          toast.success(`Tracked ${d.title}!`);
+        } catch (dbErr: any) {
+          console.warn("Supabase save error or timeout, falling back to local state:", dbErr);
+          newMovie.id = newMovie.id || `local-${Date.now()}`;
+          insertedMovie = newMovie;
+          toast.info(`Tracked ${d.title} (Saved to current session)`);
         }
-        toast.success(`Tracked ${d.title}!`);
-        onImported({
-          ...(data || newMovie),
+
+        const movieToEmit = {
+          ...(insertedMovie || newMovie),
           posterUrl: posterFull,
           bannerUrl: bannerFull
-        });
+        };
+
+        // Decouple the onImported call to prevent parent re-renders from blocking this modal's unmount or completion
+        setTimeout(() => {
+          onImported(movieToEmit);
+        }, 100);
       } else {
         newMovie.id = Date.now().toString();
         toast.success(`Tracked ${d.title} (Local)`);
-        onImported({
+        
+        const movieToEmit = {
           ...newMovie,
           posterUrl: posterFull,
           bannerUrl: bannerFull
-        });
+        };
+
+        setTimeout(() => {
+          onImported(movieToEmit);
+        }, 100);
       }
     } catch (err: any) {
+      console.error("TmdbImporter track error:", err);
       toast.error(err.message || "Failed to track movie");
     } finally {
-      setImportingId(null);
+      // Small delay to ensure UI feels responsive before resetting state
+      setTimeout(() => setImportingId(null), 200);
     }
   };
 
@@ -138,7 +172,10 @@ export const TmdbImporter: React.FC<{
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowKeyConfig(!showKeyConfig)}
+              disabled={importingId !== null}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                importingId !== null ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 currentKey
                   ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                   : 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
@@ -148,7 +185,10 @@ export const TmdbImporter: React.FC<{
               <KeyRound size={14} />
               {currentKey ? 'API Key Active' : 'Set TMDb API Key'}
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white">
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+            >
               <X />
             </button>
           </div>
@@ -217,64 +257,74 @@ export const TmdbImporter: React.FC<{
           </div>
         )}
         
-        <div className="p-6 border-b border-white/10">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search movie title (e.g., Inception, Jawan)..."
-              className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-            />
-            <button 
-              type="submit" 
-              disabled={loading || !query.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
-            >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
-            </button>
-          </form>
-        </div>
+        <div className={`flex-1 flex flex-col min-h-0 ${importingId !== null ? 'pointer-events-none opacity-50' : ''}`}>
+          <div className="p-6 border-b border-white/10">
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search movie title (e.g., Inception, Jawan)..."
+                disabled={loading || importingId !== null}
+                className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none disabled:opacity-50"
+              />
+              <button 
+                type="submit" 
+                disabled={loading || !query.trim() || importingId !== null}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
+              </button>
+            </form>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          {results.length === 0 && !loading && (
-            <div className="h-full flex flex-col items-center justify-center text-white/30">
-              <Search size={48} className="mb-4 opacity-50" />
-              <p>Search results will appear here.</p>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {results.map((r) => (
-              <div key={r.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
-                <div className="w-16 h-24 bg-zinc-800 rounded-lg shrink-0 overflow-hidden">
-                  {r.poster_path ? (
-                    <img src={IMG(r.poster_path, 'w185')} alt={r.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-white/20">No Image</div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 py-1 flex flex-col">
-                  <h4 className="font-bold text-sm truncate text-white" title={r.title}>{r.title}</h4>
-                  <p className="text-xs text-white/50">{r.release_date?.slice(0,4)} • ★ {r.vote_average}</p>
-                  
-                  <div className="mt-auto">
-                    <button
-                      onClick={() => handleTrack(r)}
-                      disabled={importingId === r.id}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white/10 hover:bg-white/20 disabled:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors"
-                    >
-                      {importingId === r.id ? (
-                        <><Loader2 size={14} className="animate-spin" /> Tracking...</>
-                      ) : (
-                        <><Plus size={14} /> Track Movie</>
-                      )}
-                    </button>
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar relative">
+            {importingId !== null && (
+              <div className="absolute inset-0 z-10 bg-black/20 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
+                <Loader2 className="animate-spin text-blue-500" size={40} />
+                <p className="text-sm font-medium text-white">Importing metadata...</p>
+              </div>
+            )}
+            
+            {results.length === 0 && !loading && (
+              <div className="h-full flex flex-col items-center justify-center text-white/30">
+                <Search size={48} className="mb-4 opacity-50" />
+                <p>Search results will appear here.</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {results.map((r) => (
+                <div key={r.id} className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-4 hover:bg-white/10 transition-colors">
+                  <div className="w-16 h-24 bg-zinc-800 rounded-lg shrink-0 overflow-hidden">
+                    {r.poster_path ? (
+                      <img src={IMG(r.poster_path, 'w185')} alt={r.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-white/20">No Image</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 py-1 flex flex-col">
+                    <h4 className="font-bold text-sm truncate text-white" title={r.title}>{r.title}</h4>
+                    <p className="text-xs text-white/50">{r.release_date?.slice(0,4)} • ★ {r.vote_average}</p>
+                    
+                    <div className="mt-auto">
+                      <button
+                        onClick={() => handleTrack(r)}
+                        disabled={importingId !== null}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white/10 hover:bg-white/20 disabled:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors"
+                      >
+                        {importingId === r.id ? (
+                          <><Loader2 size={14} className="animate-spin" /> Tracking...</>
+                        ) : (
+                          <><Plus size={14} /> Track Movie</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </motion.div>

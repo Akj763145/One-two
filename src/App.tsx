@@ -66,6 +66,7 @@ interface Movie {
   genres?: string[];
   slug?: string;
   is_published?: boolean;
+  _isFormatted?: boolean;
 }
 
 interface AuditLog {
@@ -1178,7 +1179,10 @@ const MainApp = () => {
     return `${titleSlug}-${movie.id}`;
   };
 
-  const formatMovieRecord = (m: any): Movie => {
+  const formatMovieRecord = useCallback((m: any): Movie => {
+    // If it's already formatted (has our custom processed URLs), return as is to save cycles
+    if (m._isFormatted) return m;
+
     const poster = m.posterUrl || (m.poster_path ? (m.poster_path.startsWith('http') ? m.poster_path : `https://image.tmdb.org/t/p/w500${m.poster_path}`) : '');
     const banner = m.bannerUrl || (m.backdrop_path ? (m.backdrop_path.startsWith('http') ? m.backdrop_path : `https://image.tmdb.org/t/p/w1280${m.backdrop_path}`) : poster);
     
@@ -1196,33 +1200,49 @@ const MainApp = () => {
     }
 
     const titleSlug = (m.title || 'movie').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const slug = m.slug || `${titleSlug}-${m.id}`;
+    const id = m.id || m.tmdb_id?.toString() || Math.random().toString(36).substring(7);
+    const slug = m.slug || `${titleSlug}-${id}`;
 
     return {
       ...m,
+      id,
       slug,
       trailerUrl: cleanTrailer,
       posterUrl: poster,
       bannerUrl: banner,
       description: m.description || m.overview || '',
-      category: m.category || (m.genres && m.genres.length > 0 ? m.genres[0] : 'Other')
+      category: m.category || (m.genres && m.genres.length > 0 ? m.genres[0] : 'Other'),
+      _isFormatted: true // Marker to avoid re-processing
     };
-  };
+  }, []);
 
-  const dedupeMovies = (list: any[]): Movie[] => {
+  const dedupeMovies = useCallback((list: any[]): Movie[] => {
+    if (!list || list.length === 0) return [];
     const seen = new Set<string>();
     const result: Movie[] = [];
-    for (const item of (list || [])) {
+    
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
       if (!item) continue;
-      const formatted = formatMovieRecord(item);
-      if (!formatted.id) continue;
-      if (!seen.has(formatted.id)) {
-        seen.add(formatted.id);
-        result.push(formatted);
+      
+      const id = item.id || item.tmdb_id?.toString();
+      if (!id) {
+        // If no ID at all, format it to get one
+        const formatted = formatMovieRecord(item);
+        if (formatted.id && !seen.has(formatted.id)) {
+          seen.add(formatted.id);
+          result.push(formatted);
+        }
+        continue;
+      }
+      
+      if (!seen.has(id)) {
+        seen.add(id);
+        result.push(formatMovieRecord(item));
       }
     }
     return result;
-  };
+  }, [formatMovieRecord]);
 
   const fetchMovies = async () => {
     if (!supabase) {
@@ -2127,8 +2147,8 @@ const MainApp = () => {
                         <input required type="url" value={formData.posterUrl} onChange={(e) => setFormData({...formData, posterUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Download URL *</label>
-                        <input required type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
+                        <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Download URL (Optional)</label>
+                        <input type="url" value={formData.url} onChange={(e) => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-current focus:outline-none focus:ring-2 focus:ring-current/30 transition-all" placeholder="https://..." />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-current opacity-40 uppercase tracking-[0.2em] mb-2 pl-1">Watch URL (Optional)</label>
@@ -2266,7 +2286,7 @@ const MainApp = () => {
               </p>
               <div className="flex flex-col gap-3">
                 <button onClick={confirmDelete} disabled={isActionLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl py-4 transition-all shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center gap-2">
-                  {isActionLoading ? <Spinner size={18} /> : 'Yes, Delete Permanently'}
+                  {isActionLoading ? <Loader size={18} className="animate-spin" /> : 'Yes, Delete Permanently'}
                 </button>
                 <button onClick={() => setMovieToDelete(null)} disabled={isActionLoading} className="w-full bg-white/5 hover:bg-white/10 text-white/70 font-bold rounded-xl py-4 transition-colors">
                   Cancel

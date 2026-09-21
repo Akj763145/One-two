@@ -23,6 +23,10 @@ export function setTmdbApiKey(key: string): void {
 async function tmdb(path: string, params: Record<string, string | number | boolean> = {}) {
   const apiKey = getTmdbApiKey();
 
+  // Create an abort controller with a 10s timeout to prevent UI from freezing indefinitely
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   // If a client-side API key is available (either from localStorage or VITE_TMDB_API_KEY),
   // call the official TMDb v3/v4 API directly.
   if (apiKey) {
@@ -43,14 +47,19 @@ async function tmdb(path: string, params: Record<string, string | number | boole
     });
 
     try {
-      const r = await fetch(url.toString(), { headers });
+      const r = await fetch(url.toString(), { headers, signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!r.ok) {
         const errJson = await r.json().catch(() => ({}));
         throw new Error(errJson.status_message || `TMDb API error (${r.status})`);
       }
       return await r.json();
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error("Direct TMDb fetch error:", error);
+      if (error.name === 'AbortError') {
+        throw new Error("TMDb request timed out after 10 seconds. Check your network or VPN connection.");
+      }
       if (error.name === 'TypeError' && (error.message === 'Failed to fetch' || error.message.includes('fetch'))) {
         throw new Error(
           "Network request to TMDb was blocked (Failed to fetch). Possible causes: 1) Ad-blocker or Brave Shields blocking TMDb, 2) ISP DNS blocking api.themoviedb.org, 3) Pasted v4 token instead of v3 key, or 4) No internet connection."
@@ -67,7 +76,8 @@ async function tmdb(path: string, params: Record<string, string | number | boole
   );
   
   try {
-    const r = await fetch(url.toString());
+    const r = await fetch(url.toString(), { signal: controller.signal });
+    clearTimeout(timeoutId);
     const contentType = r.headers.get("content-type") || "";
 
     // On static hosts (like Render Static Sites), unmatched routes return index.html
@@ -81,7 +91,11 @@ async function tmdb(path: string, params: Record<string, string | number | boole
     }
     return await r.json();
   } catch (error: any) {
+    clearTimeout(timeoutId);
     console.error("TMDb fetch error:", error);
+    if (error.name === 'AbortError') {
+      throw new Error("TMDb proxy request timed out. Please configure a client TMDb API key.");
+    }
     throw error;
   }
 }
